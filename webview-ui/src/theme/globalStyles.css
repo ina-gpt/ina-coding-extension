@@ -1,0 +1,93 @@
+/* Phase 11.1 — INA Theme Global Styles — all colors via CSS variables */
+
+/* Theme transition */
+.theme-transitioning * {
+  transition: background-color var(--ina-transition-theme, 400ms ease),
+              color var(--ina-transition-theme, 400ms ease),
+              border-color var(--ina-transition-theme, 400ms ease) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--ina-scrollbar-thumb); border-radius: 4px; }
+::-webkit-scrollbar-track { background: var(--ina-scrollbar-track, transparent); }
+::-webkit-scrollbar-thumb:hover { background: var(--ina-scrollbar-thumb-hover); }
+
+/* Selection */
+::selection { background: var(--ina-accent-primary, #3b82f6); color: var(--ina-accent-primary-text, #fff); opacity: 0.3; }
+
+/* Focus */
+:focus-visible { outline: 2px solid var(--ina-border-focus, #3b82f6); outline-offset: 2px; }
+
+/* Code */
+code:not(pre code) {
+  font-family: var(--ina-font-family-code);
+  background: var(--ina-code-inline-bg);
+  padding: 1px 4px;
+  border-radius: var(--ina-radius-sm, 4px);
+  font-size: 0.9em;
+}
+pre { font-family: var(--ina-font-family-code); background: var(--ina-code-block-bg); border: 1px solid var(--ina-code-block-border); border-radius: var(--ina-radius-md, 6px); padding: var(--ina-spacing-lg, 12px); overflow-x: auto; }
+
+/* Status badges */
+.badge-success { background: var(--ina-status-success-bg); color: var(--ina-status-success); }
+.badge-warning { background: var(--ina-status-warning-bg); color: var(--ina-status-warning); }
+.badge-error { background: var(--ina-status-error-bg); color: var(--ina-status-error); }
+.badge-info { background: var(--ina-status-info-bg); color: var(--ina-status-info); }
+
+/* Buttons */
+.btn-primary { background: var(--ina-accent-primary); color: var(--ina-accent-primary-text); border: none; border-radius: var(--ina-radius-md); padding: var(--ina-spacing-md) var(--ina-spacing-xl); cursor: pointer; transition: background var(--ina-transition-fast, 100ms ease); }
+.btn-primary:hover { background: var(--ina-accent-primary-hover); }
+
+/* Diff */
+.diff-added { background: var(--ina-code-diff-added); }
+.diff-removed { background: var(--ina-code-diff-removed); }
+.diff-changed { background: var(--ina-code-diff-changed); }
+
+/* Agent step indicators */
+.step-pending { border-left: 3px solid var(--ina-agent-step-pending); }
+.step-active { border-left: 3px solid var(--ina-agent-step-active); }
+.step-complete { border-left: 3px solid var(--ina-agent-step-complete); }
+.step-failed { border-left: 3px solid var(--ina-agent-step-failed); }
+
+/* Compact mode */
+[data-compact="true"] {
+  --ina-spacing-xs: 1px; --ina-spacing-sm: 2px; --ina-spacing-md: 4px;
+  --ina-spacing-lg: 8px; --ina-spacing-xl: 12px; --ina-font-size-md: 12px;
+}
+
+/* Phase 17.7 — Typing indicator animation */
+@keyframes typing-dot {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* Message hover actions */
+.message-actions { transition: opacity 150ms ease; }
+
+/* Smooth scroll */
+.scroll-smooth { scroll-behavior: smooth; }
+
+/* Code block language badges */
+.lang-badge-ts { background: #3178c6; }
+.lang-badge-js { background: #f7df1e; color: #000; }
+.lang-badge-py { background: #3776ab; }
+.lang-badge-rs { background: #ce412b; }
+.lang-badge-go { background: #00add8; }
+.lang-badge-java { background: #b07219; }
+.lang-badge-rb { background: #cc342d; }
+.lang-badge-cpp { background: #f34b7d; }
+
+/* Focus ring for accessibility */
+.focus-ring:focus-visible { outline: 2px solid var(--ina-border-focus, #3b82f6); outline-offset: 2px; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Print styles */
+@media print {
+  .chat-input, .message-actions, .header-actions, .sidebar { display: none !important; }
+  .message { page-break-inside: avoid; }
+}

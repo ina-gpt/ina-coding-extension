@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="60" y1="60" x2="196" y2="196" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="256" height="256" rx="48" fill="url(#bg)"/>
+  <!-- Code brackets < > -->
+  <path d="M95 88L55 128L95 168" stroke="url(#accent)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M161 88L201 128L161 168" stroke="url(#accent)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- AI sparkle/brain dot pattern in center -->
+  <circle cx="128" cy="112" r="6" fill="#3b82f6"/>
+  <circle cx="112" cy="132" r="4" fill="#60a5fa"/>
+  <circle cx="144" cy="132" r="4" fill="#60a5fa"/>
+  <circle cx="128" cy="148" r="5" fill="#22d3ee"/>
+  <circle cx="118" cy="120" r="3" fill="#93c5fd" opacity="0.7"/>
+  <circle cx="138" cy="120" r="3" fill="#93c5fd" opacity="0.7"/>
+  <circle cx="128" cy="128" r="8" fill="url(#accent)" opacity="0.4"/>
+  <!-- INA text -->
+  <text x="128" y="220" text-anchor="middle" fill="white" font-family="'SF Pro Display', 'Segoe UI', system-ui, sans-serif" font-size="28" font-weight="700" letter-spacing="4">INA</text>
+</svg>

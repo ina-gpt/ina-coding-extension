@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INA Coding — Download</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { max-width: 640px; padding: 48px 32px; text-align: center; }
+    .logo { width: 96px; height: 96px; margin: 0 auto 24px; }
+    h1 { font-size: 2rem; margin-bottom: 8px; }
+    .subtitle { color: #94a3b8; margin-bottom: 32px; font-size: 1.1rem; }
+    .downloads { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+    .download-btn { display: block; padding: 16px 24px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 1rem; transition: transform 0.2s, box-shadow 0.2s; }
+    .download-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+    .primary { background: #3b82f6; color: white; }
+    .secondary { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
+    .badge-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; }
+    .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; background: #1e293b; border: 1px solid #334155; }
+    .install-code { background: #1e293b; padding: 12px 20px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; margin: 8px 0; display: inline-block; }
+    .footer { color: #64748b; font-size: 0.85rem; margin-top: 32px; }
+    .footer a { color: #60a5fa; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="icon-256.png" alt="INA Coding" class="logo" />
+    <h1>INA Coding</h1>
+    <p class="subtitle">AI Code Assistant — Self-hosted, Private, GDPR Compliant</p>
+
+    <div class="badge-row">
+      <span class="badge">Made in Germany</span>
+      <span class="badge">GDPR Compliant</span>
+      <span class="badge">Zero Telemetry</span>
+    </div>
+
+    <div class="downloads">
+      <a href="ina-coding-latest.vsix" class="download-btn primary">
+        Download Latest VSIX
+      </a>
+      <a href="https://marketplace.visualstudio.com/items?itemName=inagpt.ina-coding" class="download-btn secondary">
+        VS Code Marketplace
+      </a>
+      <a href="https://open-vsx.org/extension/inagpt/ina-coding" class="download-btn secondary">
+        Open VSX Registry (VS Codium)
+      </a>
+    </div>
+
+    <p style="color: #94a3b8; margin-bottom: 12px;">Install from terminal:</p>
+    <div class="install-code">code --install-extension inagpt.ina-coding</div>
+    <br/>
+    <div class="install-code">codium --install-extension inagpt.ina-coding</div>
+
+    <div class="footer">
+      <p>&copy; 2026 <a href="https://inagpt.com">INA GPT GmbH</a>, Berlin</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,42 @@
+---
+project: MyProject
+language: typescript
+---
+
+# Tech Stack
+- TypeScript with strict mode
+- Add your frameworks and tools here
+
+# Architecture
+- Describe your project architecture
+- Add folder structure conventions
+
+# Coding Style
+- Use consistent formatting
+- Add your style preferences
+
+# Naming
+- PascalCase for types and components
+- camelCase for functions and variables
+- UPPER_SNAKE_CASE for constants
+
+# Do
+- Follow existing patterns in the codebase
+- Write meaningful variable and function names
+- Handle errors gracefully
+- Write tests for business logic
+
+# Don't
+- Don't leave TODO comments without a ticket reference
+- Don't use magic numbers — use named constants
+- Don't ignore linting warnings
+- Don't commit commented-out code
+
+# Error Handling
+- Always catch errors in async functions
+- Return typed error responses
+- Log errors with context
+
+# Git
+- Use conventional commits: feat:, fix:, chore:, docs:
+- Keep commits focused and atomic

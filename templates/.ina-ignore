@@ -1,0 +1,56 @@
+# INA Coding - Ignore Configuration
+# Syntax same as .gitignore
+
+# Build Outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+target/
+
+# Dependencies
+node_modules/
+bower_components/
+vendor/
+.pnpm/
+
+# Version Control
+.git/
+.svn/
+
+# IDE/Editor
+.idea/
+.vscode/
+
+# Environment & Secrets
+.env
+.env.*
+*.pem
+*.key
+secrets/
+
+# Cache
+.cache/
+__pycache__/
+*.pyc
+
+# Logs
+logs/
+*.log
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+
+# Temporary Files
+tmp/
+temp/
+
+# Large/Binary Files
+*.zip
+*.tar.gz
+*.rar
+
+# Project-Specific Exclusions
+# Add your project-specific patterns below:

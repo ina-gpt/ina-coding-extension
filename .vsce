@@ -1,0 +1,14 @@
+Publisher: inagpt
+Display Name: INA GPT GmbH
+
+To create publisher:
+1. Go to https://marketplace.visualstudio.com/manage
+2. Sign in with Microsoft account
+3. Create publisher "inagpt"
+4. Generate Personal Access Token (PAT) from Azure DevOps
+5. Run: vsce login inagpt
+6. Run: vsce publish
+
+Or publish VSIX manually:
+1. Build: vsce package
+2. Upload at https://marketplace.visualstudio.com/manage
