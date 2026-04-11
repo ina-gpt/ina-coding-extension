@@ -2508,13 +2508,13 @@
         "when": "inaCoding.completionVisible && editorTextFocus"
       },
       {
-        "command": "inaCoding.nextCompletion",
+        "command": "inaCoding.cycleCompletionNext",
         "key": "alt+]",
         "mac": "alt+]",
         "when": "inaCoding.completionVisible && editorTextFocus"
       },
       {
-        "command": "inaCoding.prevCompletion",
+        "command": "inaCoding.cycleCompletionPrevious",
         "key": "alt+[",
         "mac": "alt+[",
         "when": "inaCoding.completionVisible && editorTextFocus"
@@ -2985,11 +2985,11 @@
           "when": "false"
         },
         {
-          "command": "inaCoding.nextCompletion",
+          "command": "inaCoding.cycleCompletionNext",
           "when": "false"
         },
         {
-          "command": "inaCoding.prevCompletion",
+          "command": "inaCoding.cycleCompletionPrevious",
           "when": "false"
         },
         {
