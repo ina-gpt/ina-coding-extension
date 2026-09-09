@@ -38,6 +38,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/brand-lint.mjs --provenance-guard
 
+      # A published security or privacy claim must carry a passing test. The
+      # class this closes: "Zero telemetry by default" was false for five months
+      # because nothing verified it (NC-2026-09-09-01).
+      - name: claim-audit gate negative proof
+        run: node scripts/claim-audit.mjs --selftest
+
+      - name: claim-audit (every public claim has a passing proof)
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npx tsc -p . --outDir out
+          node scripts/claim-audit.mjs
+
       - name: brand-lint
         id: lint
         shell: bash

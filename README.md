@@ -134,8 +134,13 @@ Every item in this list has an implementation **and an executable test**. The
 test is named next to the claim; if a test is removed, the claim moves to
 Roadmap in the same commit (see [BRANDING.md](BRANDING.md) §4).
 
-- **Self-hosted** — the assistant talks only to the server URL you configure
-  (`inaCoding.api.endpoint`). No INA-operated endpoint is contacted by default.
+- **Self-hostable, and honest about the default** — the assistant talks to
+  exactly one server: whatever `inaCoding.api.endpoint` is set to. Point it at
+  your own deployment and no traffic reaches INA GPT GmbH. **Out of the box it
+  is set to `https://coding-api.inagpt.com`, which INA GPT GmbH operates** — so
+  self-hosting is a configuration you make, not a default you inherit. Proven by
+  a test that pins the default and asserts no second endpoint is contacted.
+  → `tests/self-hosted.test.cjs` · `src/utils/ConfigManager.ts`
 - **Encryption at rest — AES-256-GCM** for locally stored data, with a random
   IV per message and authenticated decryption.
   → `tests/claims.test.cjs` · `src/services/privacy/DataEncryptionService.ts`
@@ -226,7 +231,7 @@ INA Coding ships 300+ settings. The ones most deployments touch:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `inaCoding.api.endpoint` | `https://inagpt.com` | Server URL |
+| `inaCoding.api.endpoint` | `https://coding-api.inagpt.com` | Server URL (INA-operated by default; set your own to self-host) |
 | `inaCoding.privacy.mode` | `standard` | Privacy mode (standard/strict/local_only) |
 | `inaCoding.privacy.encryptAtRest` | `true` | Encrypt locally stored data |
 | `inaCoding.privacy.secretDetection` | `true` | Detect and mask secrets before sending |

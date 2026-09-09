@@ -7059,8 +7059,12 @@
     "brand-lint": "node scripts/brand-lint.mjs",
     "test:brand": "node --test tests/brand-lint.negative.test.mjs",
     "test:claims": "node --require ./tests/vscode-stub.cjs --test tests/claims.test.cjs",
-    "test:unit": "npm run test:brand && npm run test:claims && npm run test:telemetry",
-    "test:telemetry": "node --require ./tests/vscode-stub.cjs --test tests/telemetry-default.test.cjs"
+    "test:unit": "npm run test:brand && npm run test:claims && npm run test:telemetry && npm run test:selfhosted && npm run test:secret && npm run test:claim-gate && npm run claim-audit",
+    "test:telemetry": "node --require ./tests/vscode-stub.cjs --test tests/telemetry-default.test.cjs",
+    "claim-audit": "node scripts/claim-audit.mjs",
+    "test:claim-gate": "node scripts/claim-audit.mjs --selftest",
+    "test:selfhosted": "node --require ./tests/vscode-stub.cjs --test tests/self-hosted.test.cjs",
+    "test:secret": "node --test tests/secret-lint.negative.test.mjs"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
