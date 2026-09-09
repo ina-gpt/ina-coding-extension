@@ -4168,7 +4168,7 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.commands.registerCommand('inaCoding.voice.startListening', async () => {
         const available = await stt.isAvailable();
         if (!available) {
-          vscode.window.showWarningMessage('INA-7 Pro · Whisper STT not available. Check voice.sttEndpoint setting.');
+          vscode.window.showWarningMessage('INA-7 Pro · INA Speech-to-Text not available. Check voice.sttEndpoint setting.');
           return;
         }
         voiceStatusBar.text = '$(record) Recording...';

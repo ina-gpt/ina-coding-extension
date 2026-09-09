@@ -1,0 +1,49 @@
+name: brand-lint
+
+# Enforces BRANDING.md on every public surface in this repository.
+# The rule used to exist only as human judgement; this is the half that runs.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  brand-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # brand-lint scans `git ls-files`; a shallow checkout still lists
+          # every tracked path, but fetch-depth 1 keeps the job cheap.
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The negative proof runs FIRST and in the same job. A guard whose own
+      # proof is not executed alongside it is a guard nobody has checked.
+      - name: Negative proof (the gate must be able to fail)
+        run: node --test tests/brand-lint.negative.test.mjs
+
+      - name: brand-lint
+        id: lint
+        shell: bash
+        # pipefail is MANDATORY here: without it the pipeline reports `tee`'s
+        # exit status and a repository full of violations ships green. GitHub's
+        # bash step does not set it for you.
+        run: |
+          set -euo pipefail
+          node scripts/brand-lint.mjs --json | tee brand-lint-report.json
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brand-lint-report
+          path: brand-lint-report.json
+          if-no-files-found: warn

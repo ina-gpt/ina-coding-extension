@@ -248,8 +248,8 @@ export class FIMModelRouter {
    * Phase 27 — User-setting-aware completion model routing.
    *
    * Reads inaCoding.completion.model setting:
-   *   'fast'     → use qwen2.5-coder:1.5b (low latency)
-   *   'standard' → use qwen2.5-coder:32b (high quality)
+   *   'fast'     → use the low-latency INA 8 Coding tier
+   *   'standard' → use the high-quality INA 8 Coding tier
    *   'auto'     → use fast if available and healthy, else standard
    */
   getCompletionModel(): string {

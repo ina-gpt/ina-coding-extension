@@ -9,3 +9,7 @@ node_modules
 .env.local
 webview-ui/node_modules
 webview-ui/dist
+out/
+
+# Enterprise documentation is NDA-scoped and lives in ina-coding-enterprise-docs
+docs/enterprise/

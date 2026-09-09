@@ -19,7 +19,7 @@ All notable changes to the INA Coding extension will be documented in this file.
 - **Documentation RAG** — Crawl and index documentation, 15+ built-in sources
 - **Git Integration** — Branch, commits, diff, blame, PR context
 - **LSP Integration** — Types, signatures, definitions, references, call hierarchy
-- **Image Support** — Paste screenshots, design-to-code with qwen2.5vl
+- **Image Support** — Paste screenshots, design-to-code with INA Vision
 - **Memory System** — Remember facts, decisions, patterns across sessions
 - **Project Rules** — `.ina-rules` file for per-project AI behavior
 - **Global Rules** — Personal preferences across all projects

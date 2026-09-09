@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# brand-lint pre-commit hook — see BRANDING.md.
+# Enabled per clone with:  git config core.hooksPath .githooks
+#
+# pipefail is set because a piped lint whose exit code is the filter's would
+# let every violation through while looking like it ran.
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "brand-lint: node not found — cannot verify branding. Refusing the commit." >&2
+  echo "            (install Node 18+, or bypass deliberately with --no-verify)" >&2
+  exit 1
+fi
+
+if ! node "$ROOT/scripts/brand-lint.mjs" --staged; then
+  cat >&2 <<'MSG'
+
+brand-lint: this commit adds a forbidden term on a line it introduces.
+            The lines listed above are ADDED lines in this commit — pre-existing
+            occurrences elsewhere in the same file are not counted.
+            See BRANDING.md for the canonical names.
+
+            LICENSE / NOTICE / THIRD_PARTY_NOTICES are exempt by design —
+            upstream attribution is an Apache-2.0 obligation and must stay.
+
+            If a hit is a protocol or config identifier, do not rename it:
+            add the canonical name and keep the old one as a deprecated alias.
+MSG
+  exit 1
+fi

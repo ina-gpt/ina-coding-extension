@@ -3606,7 +3606,10 @@
         "inaCoding.apply.model": {
           "type": "string",
           "default": "fast",
-          "enum": ["fast", "standard"],
+          "enum": [
+            "fast",
+            "standard"
+          ],
           "enumDescriptions": [
             "INA-7 Pro Fast — schnelleres Apply mit kleinerem Modell (empfohlen)",
             "INA-7 Pro Standard — volles Modell für maximale Genauigkeit"
@@ -3623,13 +3626,16 @@
           "type": "number",
           "default": 0.95,
           "minimum": 0.5,
-          "maximum": 1.0,
+          "maximum": 1,
           "description": "Mindestsicherheit für Sofort-Apply (0.5-1.0)"
         },
         "inaCoding.memory.scope": {
           "type": "string",
           "default": "global",
-          "enum": ["project", "global"],
+          "enum": [
+            "project",
+            "global"
+          ],
           "enumDescriptions": [
             "Nur für dieses Projekt — Erinnerungen werden nicht zwischen Projekten geteilt",
             "Global — Erinnerungen werden über alle Projekte hinweg geteilt (empfohlen)"
@@ -3883,12 +3889,12 @@
         "inaCoding.voice.sttEndpoint": {
           "type": "string",
           "default": "http://localhost:5051",
-          "description": "Whisper Speech-to-Text endpoint URL"
+          "description": "INA Speech-to-Text endpoint URL"
         },
         "inaCoding.voice.ttsEndpoint": {
           "type": "string",
           "default": "http://localhost:6006",
-          "description": "Piper Text-to-Speech endpoint URL"
+          "description": "INA Text-to-Speech endpoint URL"
         },
         "inaCoding.voice.pushToTalk": {
           "type": "boolean",
@@ -5672,7 +5678,7 @@
         "inaCoding.offline.enableLocalModel": {
           "type": "boolean",
           "default": true,
-          "description": "Use local Ollama model when offline",
+          "description": "Use a local INA Inference Runtime model when offline",
           "order": 200
         },
         "inaCoding.offline.localModelName": {
@@ -6743,7 +6749,11 @@
         "inaCoding.telemetry.detailLevel": {
           "type": "string",
           "default": "standard",
-          "enum": ["minimal", "standard", "detailed"],
+          "enum": [
+            "minimal",
+            "standard",
+            "detailed"
+          ],
           "enumDescriptions": [
             "Minimal — nur Feature-Nutzung und Fehler",
             "Standard — plus Antwortzeiten und Modellverwendung (empfohlen)",
@@ -6765,7 +6775,11 @@
         "inaCoding.userIntelligence.auditLevel": {
           "type": "number",
           "default": 2,
-          "enum": [1, 2, 3],
+          "enum": [
+            1,
+            2,
+            3
+          ],
           "enumDescriptions": [
             "Stufe 1 — Nur Metadaten: Feature-Nutzung, Zeiten, Akzeptanzraten (kein Inhalt)",
             "Stufe 2 — Plus Zusammenfassungen: Kurze Zusammenfassung jeder Anfrage (empfohlen)",
@@ -6805,7 +6819,9 @@
         },
         "inaCoding.github.prReviewers": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Standard-Reviewer für automatische Pull Requests (GitHub-Benutzernamen)"
         },
@@ -6830,7 +6846,11 @@
         "inaCoding.completion.model": {
           "type": "string",
           "default": "auto",
-          "enum": ["auto", "fast", "standard"],
+          "enum": [
+            "auto",
+            "fast",
+            "standard"
+          ],
           "enumDescriptions": [
             "Automatisch — schnelles Modell wenn verfügbar, sonst Standard",
             "Schnell — INA-7 Pro Fast (1.5B), niedrige Latenz, leicht geringere Qualität",
@@ -6841,7 +6861,7 @@
         "inaCoding.completion.fastModelName": {
           "type": "string",
           "default": "qwen2.5-coder:1.5b",
-          "description": "Modellname für schnelle Vervollständigung (wird über Ollama geladen)"
+          "description": "Modellname für schnelle Vervollständigung (wird über die INA Inference Runtime geladen)"
         },
         "inaCoding.context.suggestedFiles": {
           "type": "boolean",
@@ -7035,7 +7055,11 @@
     "lint:fix": "eslint src --ext ts --fix",
     "test": "node ./out/test/runTest.js",
     "build:webview": "cd webview-ui && npm run build",
-    "dev:webview": "cd webview-ui && npm run dev"
+    "dev:webview": "cd webview-ui && npm run dev",
+    "brand-lint": "node scripts/brand-lint.mjs",
+    "test:brand": "node --test tests/brand-lint.negative.test.mjs",
+    "test:claims": "node --require ./tests/vscode-stub.cjs --test tests/claims.test.cjs",
+    "test:unit": "npm run test:brand && npm run test:claims"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",

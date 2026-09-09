@@ -1,6 +1,6 @@
 /**
  * SpeechToText.ts — Phase 20 Step 20.2
- * Send audio to Whisper STT endpoint
+ * Send audio to the INA Speech-to-Text endpoint
  */
 
 import { VoiceCommand, VoiceConfig, DEFAULT_VOICE_CONFIG } from './VoiceTypes';

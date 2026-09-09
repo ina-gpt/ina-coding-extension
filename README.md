@@ -1,19 +1,62 @@
-# INA Coding — AI Code Assistant
+# INA Coding
+
+**Self-hosted AI coding assistant for regulated European organisations.**
+
+Operated by INA GPT GmbH, Berlin — certified to ISO/IEC 27001:2022 by TÜV SÜD
+(Reg. No. 12 310 71178 TMS, valid until 2029-08-09).
+Gaia-X European Member No. 0469. ISO/IEC 42001 certification in progress.
+
+Your source code stays on your infrastructure. A German GmbH is contractually
+accountable for it: Auftragsverarbeitungsvertrag under Art. 28 GDPR,
+named Geschäftsführer, German court of jurisdiction.
+
+<https://www.tuvsud.com/ms-zert>
 
 <p align="center">
   <img src="media/icon-256.png" alt="INA Coding" width="128" height="128" />
 </p>
 
 <p align="center">
-  <strong>Self-hosted AI coding assistant. Privacy-first. GDPR compliant. Made in Germany.</strong>
-</p>
-
-<p align="center">
   <a href="https://inagpt.com">Website</a> •
   <a href="https://inagpt.com/coding/docs">Documentation</a> •
-  <a href="https://github.com/inagpt/ina-coding/issues">Report Bug</a> •
-  <a href="https://github.com/inagpt/ina-coding/discussions">Discussions</a>
+  <a href="IMPRESSUM.md">Impressum</a> •
+  <a href="BRANDING.md">Naming &amp; claims standard</a>
 </p>
+
+---
+
+## Compliance
+
+### Issued
+
+| Standard | Scope | Reference | Validity |
+|---|---|---|---|
+| **ISO/IEC 27001:2022** | Operation and provision of an AI-powered platform | Reg. No. 12 310 71178 TMS, TÜV SÜD | 2026-08-10 → 2029-08-09 |
+
+Certificate verification (Fundstelle): <https://www.tuvsud.com/ms-zert>
+
+### In progress
+
+| Standard | Status |
+|---|---|
+| **ISO/IEC 42001:2023** (AI management system) | Certification with TÜV SÜD **in progress** — not yet issued |
+
+### Memberships
+
+Gaia-X European Association for Data and Cloud AISBL — European Member
+(Start-up), Member No. 0469 · KI Bundesverband e. V. · Startup-Verband
+(No. 14346) · IHK Berlin (No. 10702437784)
+
+---
+
+## Company
+
+**INA GPT GmbH** · Selerweg 40 A, 12169 Berlin, Deutschland
+Geschäftsführer: Hassan Taheri
+Amtsgericht Berlin (Charlottenburg), HRB 288452 B · USt-IdNr. DE464255291
+<info@inagpt.com> · +49 30 4243 2400 · <https://inagpt.com>
+
+Full legal notice: **[IMPRESSUM.md](IMPRESSUM.md)**
 
 ---
 
@@ -40,7 +83,7 @@ Select code and press `Cmd+K` to describe changes. See a diff preview, then acce
 AI-powered autocomplete as you type. Press `Tab` to accept, `Cmd+→` for word-by-word, `Alt+]` to cycle alternatives.
 
 - Fill-in-Middle (FIM) with context-aware completions
-- Multi-model support (Qwen 2.5 Coder, DeepSeek, CodeLlama, StarCoder)
+- Model-agnostic inference layer — any standard chat-completions API or GGUF endpoint
 - Ghost text preview with partial accept
 - Learns from your coding patterns
 
@@ -86,17 +129,57 @@ Create a `.ina-rules` file to define coding standards, and the AI follows them i
 - Global rules for personal preferences across all projects
 
 ### Privacy & Security
-Your code stays on YOUR server. Zero telemetry by default.
 
-- **Self-hosted**: runs on your own infrastructure
-- **GDPR compliant**: data processed in Germany
-- **Zero telemetry**: no data sent to third parties
-- **Encryption at rest**: AES-256-GCM for stored data
-- **Secret detection**: auto-strips API keys, passwords, tokens before sending
-- **Sensitive file protection**: .env, .pem, .key files auto-excluded
-- **Ephemeral processing**: server deletes code after processing
-- **RBAC**: role-based access control with API key management
-- **Audit logging**: tamper-resistant hash-chain audit trail
+Every item in this list has an implementation **and an executable test**. The
+test is named next to the claim; if a test is removed, the claim moves to
+Roadmap in the same commit (see [BRANDING.md](BRANDING.md) §4).
+
+- **Self-hosted** — the assistant talks only to the server URL you configure
+  (`inaCoding.api.endpoint`). No INA-operated endpoint is contacted by default.
+- **Encryption at rest — AES-256-GCM** for locally stored data, with a random
+  IV per message and authenticated decryption.
+  → `tests/claims.test.cjs` · `src/services/privacy/DataEncryptionService.ts`
+- **Secret detection** — API keys, passwords and tokens are detected and masked
+  before content leaves the editor; detection records never carry the raw value.
+  → `tests/claims.test.cjs` · `src/services/privacy/SecretDetector.ts`
+- **Sensitive file protection** — `.env`, `.pem`, `.key` and similar files are
+  excluded from AI context.
+  → `tests/claims.test.cjs` · `src/services/codesec/SensitiveFileDetector.ts`
+- **Ephemeral processing signal** — every request carries an explicit
+  no-retention header for the server to honour.
+  → `tests/claims.test.cjs` · `src/services/codesec/EphemeralPolicyEnforcer.ts`
+- **RBAC** — role-based access control with API key management and team roles.
+  → `tests/claims.test.cjs` · `src/services/access/AccessTypes.ts`
+
+**Data protection.** Code is processed on the infrastructure you operate.
+INA GPT GmbH offers an Auftragsverarbeitungsvertrag under Art. 28 GDPR, with a
+named Geschäftsführer and a German court of jurisdiction. Where INA GPT GmbH
+operates the service, processing takes place in Germany.
+
+**Telemetry — read this before deploying in a regulated environment.**
+Anonymised usage statistics are **enabled by default**
+(`inaCoding.telemetry.enabled`, `.abTesting`, `.modelRouting`), retained for up
+to 180 days (`inaCoding.telemetry.retentionDays`). Per the setting
+descriptions, code content, file names and prompts are not collected, and data
+remains on your server. Set `inaCoding.telemetry.enabled` to `false` to disable
+collection entirely. Defaults are pinned by a test so they cannot change
+silently.
+
+---
+
+## Roadmap
+
+Listed here rather than under Features because the claim is not yet proven by
+an implementation and a test in this repository. This section exists so the
+Features list stays honest.
+
+- **Telemetry off by default.** The current shipped defaults enable anonymised
+  telemetry. Making "off" the default is a product decision that has not been
+  taken; until it is, the Features list does not claim it.
+- **Tamper-resistant hash-chain audit trail.** The extension renders a chain
+  integrity result returned by the server (`AuditLogViewer`), but the chain
+  itself is implemented and verified server-side. No client-side implementation
+  or test exists in this repository, so the property is not claimed here.
 
 ---
 
@@ -137,16 +220,21 @@ Real-time status bar showing connection, model status, indexing progress, active
 
 ## Configuration
 
-INA Coding has 300+ configurable settings. Key settings:
+INA Coding ships 300+ settings. The ones most deployments touch:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `inaCoding.api.endpoint` | `https://inagpt.com` | Server URL |
 | `inaCoding.privacy.mode` | `standard` | Privacy mode (standard/strict/local_only) |
-| `inaCoding.privacy.telemetryEnabled` | `false` | Send telemetry (OFF by default) |
+| `inaCoding.privacy.encryptAtRest` | `true` | Encrypt locally stored data |
+| `inaCoding.privacy.secretDetection` | `true` | Detect and mask secrets before sending |
+| `inaCoding.telemetry.enabled` | `true` | Anonymised usage statistics |
 | `inaCoding.completion.enabled` | `true` | Enable tab completion |
 | `inaCoding.agent.requireApproval` | `true` | Require plan approval |
-| `inaCoding.theme.mode` | `auto` | Theme (auto/light/dark) |
+| `inaCoding.ui.theme` | `auto` | Theme (auto/light/dark) |
+
+The complete settings reference, deployment topology and sizing guidance are
+provided under NDA on request: <info@inagpt.com>.
 
 ---
 
@@ -154,16 +242,18 @@ INA Coding has 300+ configurable settings. Key settings:
 
 ```
 +---------------------------------------------------+
-|                  VS Code Extension                 |
-|  Chat | Inline Edit | Completion | Agent | Search  |
+|                 VS Code Extension                  |
+|  Chat | Inline Edit | Completion | Agent | Search   |
 +---------------------------------------------------+
-|           INA Coding API (Self-hosted)             |
-|  Next.js | PostgreSQL | pgvector | Embeddings      |
+|            INA Coding API (self-hosted)            |
 +---------------------------------------------------+
-|              GPU Server (Ollama)                   |
-|     Qwen 2.5 Coder 32B | nomic-embed-text         |
+|              INA Inference Runtime                 |
+|            EU-based GPU infrastructure             |
 +---------------------------------------------------+
 ```
+
+Model provenance, runtime topology and capacity guidance are documented for
+procurement and provided under NDA on request.
 
 ---
 
@@ -171,6 +261,10 @@ INA Coding has 300+ configurable settings. Key settings:
 
 Copyright 2026 INA GPT GmbH, Berlin. All rights reserved.
 See [LICENSE](LICENSE) for details.
+
+Third-party components retain their own licences and attribution; see
+[LICENSE](LICENSE). Those notices are never rewritten by our naming standard —
+see [BRANDING.md](BRANDING.md) §3.
 
 ---
 

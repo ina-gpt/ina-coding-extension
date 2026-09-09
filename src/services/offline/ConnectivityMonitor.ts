@@ -1,6 +1,6 @@
 /**
  * Phase 10.3 — Connectivity Monitor
- * Monitors connection to API server, Ollama, GPU, and internet.
+ * Monitors connection to API server, INA Inference Runtime, GPU, and internet.
  */
 import { EventEmitter } from 'events';
 import { ConfigManager } from '../../utils/ConfigManager';

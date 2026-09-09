@@ -26,7 +26,7 @@ const VoicePanel: React.FC<VoicePanelProps> = ({ status, commands, isAvailable, 
     return (
       <div className="voice-panel" role="region" aria-label="Voice control">
         <div className="voice-unavailable">
-          <span className="codicon codicon-warning" /> Whisper STT not available at configured endpoint.
+          <span className="codicon codicon-warning" /> INA Speech-to-Text not available at configured endpoint.
           <p>Check voice.sttEndpoint in settings.</p>
         </div>
       </div>

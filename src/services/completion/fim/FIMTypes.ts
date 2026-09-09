@@ -172,7 +172,7 @@ export function getFIMTokensForModel(model: string): FIMTokens {
     if (model.startsWith(key.split(':')[0])) return tokens;
   }
 
-  // Default to Qwen format
+  // Default to the INA 8 Coding FIM token format
   return QWEN_FIM_TOKENS;
 }
 

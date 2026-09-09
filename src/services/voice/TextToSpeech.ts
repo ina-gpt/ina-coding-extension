@@ -1,6 +1,6 @@
 /**
  * TextToSpeech.ts — Phase 20 Step 20.2
- * Send text to Piper TTS endpoint for audio feedback
+ * Send text to the INA Text-to-Speech endpoint for audio feedback
  */
 
 import { VoiceConfig, DEFAULT_VOICE_CONFIG } from './VoiceTypes';

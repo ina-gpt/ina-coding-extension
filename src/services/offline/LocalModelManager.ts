@@ -1,6 +1,6 @@
 /**
  * Phase 10.3 — Local Model Manager
- * Manages optional local Ollama model for offline AI.
+ * Manages an optional local INA Inference Runtime model for offline AI.
  */
 import { EventEmitter } from 'events';
 import { exec } from 'child_process';
@@ -48,10 +48,10 @@ export class LocalModelManager extends EventEmitter {
           Logger.info(`[Offline] Local model ready: ${this.selectedModel}`);
           this.emit('local-model-ready', this.selectedModel);
         } else {
-          Logger.info('[Offline] Local Ollama found but no small models available');
+          Logger.info('[Offline] Local INA Inference Runtime found but no small models available');
         }
       } else {
-        Logger.debug('[Offline] No local Ollama installation detected');
+        Logger.debug('[Offline] No local INA Inference Runtime installation detected');
       }
     } catch (e) {
       Logger.debug('[Offline] Local model detection failed:', e);
@@ -214,7 +214,7 @@ export class LocalModelManager extends EventEmitter {
 
   private async detectLocalOllama(): Promise<{ available: boolean; version: string | null; url: string | null }> {
     try {
-      // Check if Ollama responds on default port
+      // Check if the local runtime responds on its default port
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3000);
       const response = await fetch('http://localhost:11434/api/tags', { signal: controller.signal });

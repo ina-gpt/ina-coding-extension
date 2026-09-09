@@ -1,7 +1,7 @@
 # Phase 5 Inline Edit - Audit Report
 
 Generated: 2026-04-07T15:45:00Z
-Auditor: Claude Code
+Auditor: internal automation toolchain
 
 ---
 
