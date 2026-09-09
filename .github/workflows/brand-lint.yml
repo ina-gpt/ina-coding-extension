@@ -81,6 +81,10 @@ jobs:
       - name: Package
         run: |
           set -euo pipefail
+          # vsce resolves --out as a FILE path unless the directory already
+          # exists: without this it fails with ENOTDIR. Passing an existing
+          # directory locally is what hid this until CI ran it.
+          mkdir -p ./artifact
           npx --yes @vscode/vsce package --out ./artifact/ --allow-missing-repository
 
       - name: Scan the packaged artifact
