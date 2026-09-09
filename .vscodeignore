@@ -41,3 +41,20 @@ marketplace-assets/**
 .vsce
 **/.eslintrc*
 **/.prettierrc*
+
+# Governance, proof and dev tooling — never ship in the published artifact.
+# .brandmap.json and BRANDING.md necessarily CONTAIN the forbidden terms (they
+# are the rule), tests/ is the proof harness, and neither is of any use to an
+# installed extension. Shipping them also made the VSIX brand scan unpassable
+# by construction.
+.brandmap.json
+BRANDING.md
+IMPRESSUM.md
+AUDIT_REPORT_PHASE5.md
+tests/**
+scripts/**
+.githooks/**
+.github/**
+build.sh
+releases/**
+*.vsix

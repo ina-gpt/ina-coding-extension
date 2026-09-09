@@ -334,3 +334,57 @@ test('(migration baseline) it NEVER applies to a staged slice', () => {
       '...must never excuse a line the author is adding right now');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+// --- provenance-guard. Its false negative publishes a confidential document,
+// --- so it gets the strictest controls: it must refuse to guess.
+
+function runProv(dir, env = {}) {
+  const r = spawnSync(process.execPath, [LINTER, '--provenance-guard', `--root=${dir}`], {
+    encoding: 'utf8', env: { ...process.env, ...env },
+  });
+  return { code: r.status, out: r.stdout + r.stderr };
+}
+
+test('(provenance) the document in a PUBLIC repository FAILS', () => {
+  const dir = fixture({
+    'docs/compliance/model-provenance.md': '# Provenance\n\nCONFIDENTIAL.\n',
+    'README.md': '# Clean\n',
+  });
+  try {
+    const { code, out } = runProv(dir, { INA_PROVENANCE_VISIBILITY: 'public' });
+    assert.equal(code, 1, 'a confidential document in a public repo must fail');
+    assert.match(out, /model-provenance\.md/, 'the report must name the file');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('(provenance) the same document in a PRIVATE repository PASSES', () => {
+  const dir = fixture({
+    'docs/compliance/model-provenance.md': '# Provenance\n\nCONFIDENTIAL.\n',
+    'README.md': '# Clean\n',
+  });
+  try {
+    const { code } = runProv(dir, { INA_PROVENANCE_VISIBILITY: 'private' });
+    assert.equal(code, 0, 'the guard must not block the document from its correct home');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('(provenance) a repository with no such document PASSES', () => {
+  const dir = fixture({ 'README.md': '# Clean\n' });
+  try {
+    const { code } = runProv(dir, { INA_PROVENANCE_VISIBILITY: 'public' });
+    assert.equal(code, 0, 'the guard must not be always-red');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('(provenance) UNKNOWN visibility REFUSES rather than assuming private', () => {
+  const dir = fixture({
+    'docs/compliance/model-provenance.md': '# Provenance\n',
+    'README.md': '# Clean\n',
+  });
+  try {
+    // No remote, no override: the guard cannot learn the visibility.
+    const { code, out } = runProv(dir);
+    assert.equal(code, 2, '"could not check" must not resolve to "private"');
+    assert.match(out, /refusing to guess|could not read/i);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});

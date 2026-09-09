@@ -130,7 +130,12 @@
     "gradle/wrapper/",
     "android/gradlew",
     "android/gradlew.bat",
-    "src/config/model-registry.ts"
+    "src/config/model-registry.ts",
+    "scripts/vsix-brand-scan.mjs",
+    "scripts/surface-lint.mjs",
+    "tests/telemetry-default.test.cjs",
+    "tests/claims.test.cjs",
+    "tests/vscode-stub.cjs"
   ],
   "binary_ext": [
     ".png",
@@ -164,24 +169,78 @@
   "superlatives_note": "Each entry is a REGEX SOURCE (case-insensitive), not a literal phrase. Sec.5 UWG bites on the SHAPE of an absolute-supremacy claim.",
   "context_exemptions": [
     {
-      "reason": "Third-party CREDENTIAL DETECTION. The label and env-var name must match the real credential type, or the scanner cannot tell the user what leaked and the pattern cannot match. Market context per BRANDING.md 2, never a statement of what INA runs on.",
+      "reason": "Third-party CREDENTIAL DETECTION. The label and env-var name must match the real credential type, or the scanner cannot tell the user what leaked and the pattern cannot match. Market context per BRANDING.md 2, never a statement of what INA runs on. The packaged bundle is listed too: the same strings survive webpack into the shipped artifact, where the whole file is a single line.",
       "files": [
         "src/services/agent/fileops/FileSecurityGuard.ts",
         "src/services/agent/verifier/SecurityVerifier.ts",
         "src/services/codesec/CodeSecurityTypes.ts",
-        "src/services/codesec/GeneratedCodeScanner.ts"
+        "src/services/codesec/GeneratedCodeScanner.ts",
+        "extension/dist/extension.js",
+        "dist/extension.js"
       ],
       "line_pattern": "sk-|API_KEY|api_key|apiKey|secret-|Key\\x27|Key\"|pattern:|labels\\s*="
     },
     {
-      "reason": "EGRESS POLICY and provider interoperability settings. Hostnames must be literal to be blockable, and a setting that lets the operator enable an external provider must name that provider or it is unusable.",
+      "reason": "EGRESS POLICY and provider interoperability settings. Hostnames must be literal to be blockable, and a setting that lets the operator enable an external provider must name that provider or it is unusable. The packaged path extension/package.json is listed too: vsce relocates the manifest under extension/ inside the .vsix.",
       "files": [
-        "package.json"
+        "package.json",
+        "extension/package.json"
       ],
       "line_pattern": "api\\.(openai|anthropic)\\.com|external model providers"
+    },
+    {
+      "reason": "THIRD-PARTY SDK DEPENDENCY. The npm package name and the class it exports are wire identifiers: renaming them does not compile. Market context per BRANDING.md 2, never a statement of what INA runs on.",
+      "files": [
+        "package.json",
+        "src/services/inagpt.service.ts"
+      ],
+      "line_pattern": "@anthropic-ai/|@openai/|\\bfrom\\s+.@|:\\s*Anthropic\\b|new\\s+Anthropic\\b|\\bOpenAI\\b\\s*\\(|\"openai\":|\"@?[a-z-]*(openai|anthropic)"
     }
   ],
-  "exempt_paths_note": "src/config/model-registry.ts is exempt BY DESIGN: BRANDING.md 5 designates it as the single sanctioned home for upstream ids. Exempting it is what makes the ratchet meaningful — every other reference is expected to migrate INTO this file, which would otherwise be permanently red.",
+  "exempt_paths_note": "Files exempt BY DESIGN: LICENSE/NOTICE/THIRD_PARTY_NOTICES (Apache-2.0 s.4 attribution); BRANDING.md and .brandmap.json (they ARE the rule and must list the forbidden terms); the linters and their negative proofs (a gate proof necessarily contains the terms it detects); src/config/model-registry.ts (BRANDING.md s.5 designates it the single sanctioned home for upstream ids).",
+  "vsix_id_baseline": 2,
+  "vsix_id_baseline_note": "MEASURED 2026-09-09 against ina-coding-1.1.0.vsix: two model-id setting DEFAULTS in the packaged manifest. Public surface in a shipped artifact is ALWAYS hard zero, no baseline. Shrink-only.",
   "id_baseline": 101,
-  "id_baseline_note": "MEASURED 2026-09-09 against this tree, EXCLUDING src/config/model-registry.ts (the sanctioned home). Public surface (DOC+CODE) is hard zero. This counts remaining direct upstream-id references outside the registry and may only SHRINK as call sites migrate behind it."
+  "public_surface_baseline": 0,
+  "surface_exemptions": [
+    {
+      "reason": "LEGAL DISCLOSURE. A GDPR Art. 28(4) subprocessor list, a DPA, an Impressum and a privacy policy must name the ACTUAL processors and legal entities. Suppressing a real subprocessor name to satisfy a branding preference is a transparency breach, and is the same class of error as stripping an Apache-2.0 attribution notice. This exemption exists for exactly the reason the LICENSE exemption exists.",
+      "url_patterns": [
+        "/subprocessors",
+        "/dpa",
+        "/impressum",
+        "/privacy",
+        "/datenschutz",
+        "/legal",
+        "/avv",
+        "/gdpr",
+        "/terms"
+      ],
+      "terms": null
+    },
+    {
+      "reason": "API INTEROPERABILITY. Developer documentation must name the client SDK a caller is expected to use; an OpenAI-compatible endpoint cannot be documented without the words OpenAI-compatible. Market context per BRANDING.md 2, never a statement of what INA runs on.",
+      "url_patterns": [
+        "/docs/api",
+        "/docs/",
+        "/api-docs",
+        "/developers"
+      ],
+      "terms": [
+        "OpenAI",
+        "Anthropic"
+      ]
+    },
+    {
+      "reason": "NEGATIVE COMPARATIVE. Naming a vendor in order to state that INA does NOT use it is the opposite of the claim this standard forbids, and removing the name would make the sentence unreadable.",
+      "url_patterns": [
+        "/technology"
+      ],
+      "terms": [
+        "OpenAI",
+        "Anthropic",
+        "Google"
+      ]
+    }
+  ]
 }

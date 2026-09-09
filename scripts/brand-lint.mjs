@@ -28,7 +28,7 @@
  * A scan that reads nothing exits 2, never 0. "We could not look" and
  * "there is nothing there" are different answers.
  */
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve, dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,12 +38,65 @@ const argv = process.argv.slice(2);
 const MODE_STAGED = argv.includes('--staged');
 const MODE_STDIN = argv.includes('--stdin');
 const MODE_JSON = argv.includes('--json');
+// --provenance-guard is a placement check, not a text check: the NDA-scoped
+// provenance document must never be tracked in a repository the public can read.
+const MODE_PROV = argv.includes('--provenance-guard');
 const rootArg = argv.find((a) => a.startsWith('--root='));
+// --dir scans a plain directory tree with no git. It exists for SHIPPED
+// ARTIFACTS: an unpacked .vsix is a public surface that a `git ls-files` scan
+// can never reach, because the bundle it contains is generated at package time.
+const dirArg = argv.find((a) => a.startsWith('--dir='));
+const MODE_DIR = Boolean(dirArg);
 const REPO = rootArg ? resolve(rootArg.slice('--root='.length)) : resolve(HERE, '..');
 
 function die(msg) {
   process.stderr.write(`brand-lint: FATAL ${msg}\n`);
   process.exit(2);
+}
+
+/* -------------------------------------------------- provenance-guard mode */
+if (MODE_PROV) {
+  // Visibility is asked of GitHub, never inferred from a path or a filename.
+  // "It looks like a private repo" is not evidence, and this is the one check
+  // whose false negative publishes a confidential document.
+  let files;
+  try {
+    files = execFileSync('git', ['-C', REPO, 'ls-files'], {
+      encoding: 'utf8', maxBuffer: 256 * 1024 * 1024,
+    }).split('\n').map((s) => s.trim()).filter(Boolean);
+  } catch (e) {
+    die(`git listing failed in ${REPO}: ${e.message}`);
+  }
+  if (files.length === 0) die(`git ls-files returned 0 files in ${REPO} — scan did not execute`);
+  const hits = files.filter((f) => /(^|\/)model-provenance\.md$/.test(f));
+  if (hits.length === 0) {
+    process.stdout.write('brand-lint --provenance-guard: OK — no provenance document is tracked here.\n');
+    process.exit(0);
+  }
+  let visibility = process.env.INA_PROVENANCE_VISIBILITY || '';
+  if (!visibility) {
+    let slug = '';
+    try {
+      const url = execFileSync('git', ['-C', REPO, 'remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim();
+      const m = url.match(/[:/]([^/:]+)\/([^/]+?)(?:\.git)?$/);
+      if (m) slug = `${m[1]}/${m[2]}`;
+    } catch { /* no remote */ }
+    if (!slug) die('cannot determine the GitHub slug — refusing to guess the visibility of a repository holding a confidential document');
+    try {
+      visibility = execFileSync('gh', ['api', `repos/${slug}`, '--jq', '.visibility'], { encoding: 'utf8' }).trim();
+    } catch (e) {
+      die(`could not read the visibility of ${slug} (${e.message}). "Could not check" is not "private" — set INA_PROVENANCE_VISIBILITY to assert it deliberately.`);
+    }
+  }
+  if (visibility === 'public') {
+    for (const h of hits) {
+      process.stdout.write(`${h}:1: [PROVENANCE] a confidential model-provenance document is tracked in a PUBLIC repository\n`);
+    }
+    process.stdout.write(`brand-lint --provenance-guard: FAIL — ${hits.length} provenance document(s) in a public repository.\n`);
+    process.exit(1);
+  }
+  process.stdout.write(`brand-lint --provenance-guard: OK — ${hits.length} provenance document(s), repository visibility "${visibility}".\n`);
+  process.exit(0);
 }
 
 const mapPath = join(REPO, '.brandmap.json');
@@ -92,9 +145,18 @@ const ID_ROOT = /(ollama|qwen|whisper|piper|nomic|deepseek|codellama|starcoder|m
 const DOC_EXT = new Set(['.md', '.mdx', '.txt', '.rst']);
 
 function isExempt(rel) {
-  return (MAP.exempt_paths || []).some((p) =>
-    p.endsWith('/') ? rel === p.slice(0, -1) || rel.startsWith(p) : rel === p
-  );
+  // Matches at the root AND at any path segment boundary. A packaged .vsix
+  // relocates everything under `extension/`, so an exact-path-only rule meant
+  // the Apache-2.0 attribution exemption did not apply to `extension/LICENSE`
+  // — the artifact gate would have failed a licence file for containing
+  // precisely the notice the licence requires. Caught by its negative proof.
+  return (MAP.exempt_paths || []).some((p) => {
+    if (p.endsWith('/')) {
+      const d = p.slice(0, -1);
+      return rel === d || rel.startsWith(p) || rel.includes(`/${p}`) || rel.endsWith(`/${d}`);
+    }
+    return rel === p || rel.endsWith(`/${p}`);
+  });
 }
 
 // A CONTEXT exemption allows a named term on a specific line shape in a
@@ -128,7 +190,16 @@ function isDoc(rel) {
   );
 }
 
-function classify(rel, line) {
+/**
+ * @param ctx        the text to judge: the whole source line, or — inside a
+ *                   minified bundle — a local window around the match.
+ * @param fullLine   true when ctx is a complete source line. Quote PAIRING is
+ *                   only trustworthy then: from an arbitrary offset inside a
+ *                   minified blob the same `"qwen3:14b"` reads as either a
+ *                   literal or the gap between two others.
+ */
+function classify(rel, ctx, fullLine = true) {
+  const line = ctx;
   if (isDoc(rel)) return 'DOC';
   // An identifier is a hit the wire, the filesystem or a config key depends
   // on. Renaming one is a compatibility change, not a copy edit — so it gets
@@ -137,13 +208,30 @@ function classify(rel, line) {
   // one character BEFORE the root, so it could never match a token that begins
   // with one — `QWEN_FIM_TOKENS` was classified as prose, which would have put
   // a symbol name on the hard-zero public-surface list and forced a rename.
-  for (const m of line.matchAll(/["'`]([^"'`\n]{1,160})["'`]/g)) {
-    if (ID_ROOT.test(m[1])) return 'ID';          // quoted model id, config key, shell command
+  // TOKEN-BASED, not quote-paired. Quote pairing is alignment-dependent: from an
+  // arbitrary offset inside a minified bundle the same `"qwen3:14b"` reads as
+  // either a quoted literal or the gap between two others, so 16 plainly quoted
+  // model ids classified as prose. A token carries its own shape regardless of
+  // where the scan window began.
+  // Quote pairing: only where it is sound.
+  if (fullLine) {
+    for (const m of line.matchAll(/["'`]([^"'`\n]{1,160})["'`]/g)) {
+      if (ID_ROOT.test(m[1])) return 'ID';        // quoted model id, config key, shell command
+    }
   }
-  for (const m of line.matchAll(/\b[A-Za-z][A-Za-z0-9_]{2,}\b/g)) {
+  for (const m of line.matchAll(/[A-Za-z0-9_.:@\/-]+/g)) {
     const tok = m[0];
     if (!ID_ROOT.test(tok)) continue;
-    if (tok === tok.toUpperCase()) return 'ID';   // SCREAMING_SNAKE symbol / env var
+    if (tok.includes(':')) return 'ID';           // model tag, e.g. qwen3:14b
+    if (tok.includes('/')) return 'ID';           // package or URL path
+    if (/^[a-z0-9][a-z0-9._-]*$/.test(tok) && /[.-]/.test(tok)) return 'ID'; // nomic-embed-text, secret-openai
+    // Dotted member access is one token to the regex but several identifiers to
+    // a reader: `FIMModel.QWEN_CODER_32B` and `ConnectionTarget.OLLAMA` are a
+    // symbol reference, not prose, and judging the whole token missed both.
+    for (const seg of tok.split('.')) {
+      if (!ID_ROOT.test(seg)) continue;
+      if (seg === seg.toUpperCase() && /[A-Z]/.test(seg)) return 'ID';
+    }
   }
   if (/[.?]\s*[a-z_][A-Za-z0-9_]*/.test(line)) {  // property access on a wire object
     for (const m of line.matchAll(/[.?]\s*([a-z_][A-Za-z0-9_]*)/g)) {
@@ -159,11 +247,26 @@ function classify(rel, line) {
   return 'CODE';
 }
 
+// A minified bundle is ONE line — 1.9 MB of it in this project's shipped VSIX.
+// The previous `if (line.length > 4000) continue` therefore skipped the entire
+// artifact and reported it clean: a gate that inspected nothing. Long lines are
+// now scanned in overlapping windows instead, so a term spanning a window
+// boundary is still seen. Measured: no tracked file in these repositories has a
+// line this long, so no baseline moved when the skip was removed.
+const WINDOW = 4000;
+const OVERLAP = 256;
+function* windows(line) {
+  if (line.length <= WINDOW) { yield [line, 0]; return; }
+  for (let start = 0; start < line.length; start += WINDOW - OVERLAP) {
+    yield [line.slice(start, start + WINDOW), start];
+    if (start + WINDOW >= line.length) break;
+  }
+}
+
 function scanText(rel, text, findings) {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (line.length > 4000) continue; // minified / generated single-line blobs
     // Every distinct term on the line is reported, not just the first: a line
     // reading "Ollama with Qwen 2.5 Coder" is two violations and the
     // replacement phase needs both. Spans already covered by a LONGER term are
@@ -172,19 +275,38 @@ function scanText(rel, text, findings) {
     const covered = (s, e) => taken.some(([a, b]) => s >= a && e <= b);
     // Interoperability lines (secret-scanner labels, egress hostnames) keep
     // their third-party names; see CTX above for why.
-    if (!contextAllowed(rel, line)) for (const { term, re } of DENY_RE) {
-      const g = new RegExp(re.source, 'gi');
-      let m;
-      while ((m = g.exec(line)) !== null) {
-        const s = m.index, e = m.index + m[0].length;
-        if (m[0].length === 0) { g.lastIndex++; continue; }
-        if (covered(s, e)) continue;
-        taken.push([s, e]);
-        findings.push({
-          file: rel, line: i + 1, column: s + 1, term,
-          rule: 'deny-term', class: classify(rel, line),
-          excerpt: line.trim().slice(0, 200),
-        });
+    if (!contextAllowed(rel, line)) for (const [chunk, base] of windows(line)) {
+      for (const { term, re } of DENY_RE) {
+        const g = new RegExp(re.source, 'gi');
+        let m;
+        while ((m = g.exec(chunk)) !== null) {
+          if (m[0].length === 0) { g.lastIndex++; continue; }
+          const s = base + m.index, e = s + m[0].length;
+          if (covered(s, e)) continue;
+          // A whole minified bundle is ONE line, so a line-level context
+          // exemption there would exempt the entire artifact. Exemptions are
+          // therefore also tested against the local neighbourhood, which is
+          // identical to the line for ordinary source.
+          const near = chunk.slice(Math.max(0, m.index - 80), m.index + m[0].length + 80);
+          if (line.length > WINDOW && contextAllowed(rel, near)) continue;
+          taken.push([s, e]);
+          findings.push({
+            file: rel, line: i + 1, column: s + 1, term,
+            // Classify on the NEIGHBOURHOOD of the match, not the whole chunk.
+            // In a minified bundle the chunk is 4000 characters of densely
+            // quoted code, and quote-PAIRING from an arbitrary window start is
+            // alignment-dependent: `"qwen3:14b"` was read as the closing quote
+            // of one pair and the opening of the next, so a plainly quoted
+            // model id classified as prose and showed up as public surface.
+            // A local window is alignment-independent and, for ordinary source
+            // lines, identical to passing the whole line.
+            rule: 'deny-term',
+            class: line.length > WINDOW
+              ? classify(rel, chunk.slice(Math.max(0, m.index - 80), m.index + m[0].length + 80), false)
+              : classify(rel, line, true),
+            excerpt: chunk.slice(Math.max(0, m.index - 60), m.index + 140).trim(),
+          });
+        }
       }
     }
     // §5 UWG governs ADVERTISING. A superlative inside a code comment or a
@@ -213,6 +335,28 @@ let scanned = 0;
 if (MODE_STDIN) {
   scanText('<stdin>', readFileSync(0, 'utf8'), findings);
   scanned = 1;
+} else if (MODE_DIR) {
+  const base = resolve(dirArg.slice('--dir='.length));
+  if (!existsSync(base)) die(`--dir target does not exist: ${base}`);
+  const NUL = String.fromCharCode(0);
+  const walk = (abs, rel) => {
+    for (const ent of readdirSync(abs, { withFileTypes: true })) {
+      const a = join(abs, ent.name);
+      const r = rel ? `${rel}/${ent.name}` : ent.name;
+      if (ent.isDirectory()) { walk(a, r); continue; }
+      if (!ent.isFile()) continue;
+      if (isExempt(r)) continue;
+      if (BIN.has(extname(r).toLowerCase())) continue;
+      let st; try { st = statSync(a); } catch { continue; }
+      if (st.size > 32 * 1024 * 1024) continue;
+      let text; try { text = readFileSync(a, 'utf8'); } catch { continue; }
+      if (text.includes(NUL)) continue;
+      scanned++;
+      scanText(r, text, findings);
+    }
+  };
+  walk(base, '');
+  if (scanned === 0) die(`--dir scanned 0 readable files under ${base} — a scan that read nothing is not a clean artifact`);
 } else if (MODE_STAGED) {
   // Staged mode scans the ADDED LINES of the staged diff, not whole files.
   //
@@ -314,6 +458,7 @@ const pubBaseline = Number.isInteger(MAP.public_surface_baseline)
   : 0;
 // --stdin and --staged scan a slice, so a baseline comparison is meaningless
 // there: any ID hit in a slice is a hit the author just touched.
+// --dir sees a whole artifact, so baselines apply there as they do to a tree.
 const sliceMode = MODE_STDIN || MODE_STAGED;
 const idRegression = sliceMode ? idCount > 0 : idCount > idBaseline;
 // In a slice (staged/stdin) any public-surface hit is one the author just
@@ -325,7 +470,7 @@ const report = {
   tool: 'brand-lint',
   version: MAP.version,
   repo: REPO,
-  mode: MODE_STDIN ? 'stdin' : MODE_STAGED ? 'staged' : 'tracked',
+  mode: MODE_STDIN ? 'stdin' : MODE_DIR ? 'dir' : MODE_STAGED ? 'staged' : 'tracked',
   files_scanned: scanned,
   violations: findings.length,
   public_surface: publicSurface,

@@ -30,6 +30,14 @@ jobs:
       - name: Negative proof (the gate must be able to fail)
         run: node --test tests/brand-lint.negative.test.mjs
 
+      # The NDA-scoped provenance document must never become tracked in a
+      # repository the public can read. GITHUB_TOKEN lets the guard ask GitHub
+      # for the real visibility instead of inferring it.
+      - name: provenance placement guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/brand-lint.mjs --provenance-guard
+
       - name: brand-lint
         id: lint
         shell: bash
@@ -46,4 +54,45 @@ jobs:
         with:
           name: brand-lint-report
           path: brand-lint-report.json
+          if-no-files-found: warn
+
+  # The tree can be clean while the SHIPPED artifact is not: the .vsix carries a
+  # webpack bundle generated at package time plus anything .vscodeignore failed
+  # to exclude. Measured once at 92 raw hits across five files while brand-lint
+  # reported the tree green. This job packages the extension and scans what a
+  # customer would actually download.
+  vsix-brand-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Artifact gate negative proof (it must be able to fail)
+        run: node scripts/vsix-brand-scan.mjs --selftest
+
+      - name: Install and build
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm run compile
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          npx --yes @vscode/vsce package --out ./artifact/ --allow-missing-repository
+
+      - name: Scan the packaged artifact
+        run: |
+          set -euo pipefail
+          V="$(ls ./artifact/*.vsix)"
+          node scripts/vsix-brand-scan.mjs --vsix="$V" --json | tee vsix-brand-report.json
+
+      - name: Upload artifact report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-brand-report
+          path: vsix-brand-report.json
           if-no-files-found: warn
