@@ -12,7 +12,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
@@ -29,7 +29,18 @@ function fixture(files) {
   execFileSync('git', ['-C', dir, 'init', '-q']);
   execFileSync('git', ['-C', dir, 'config', 'user.email', 'test@example.invalid']);
   execFileSync('git', ['-C', dir, 'config', 'user.name', 'test']);
-  copyFileSync(BRANDMAP, join(dir, '.brandmap.json'));
+  // The fixture NEUTRALISES the host repo's baselines.
+  //
+  // Copying .brandmap.json verbatim inherited whatever id_baseline /
+  // public_surface_baseline the host repo happens to carry. Installed into a
+  // repository with a large migration debt, that silently made five of these
+  // proofs pass on a linter that had stopped biting — a proof must control its
+  // premise, never read the live tree and hope. Tests that need a baseline set
+  // it explicitly afterwards.
+  const map = JSON.parse(readFileSync(BRANDMAP, 'utf8'));
+  map.id_baseline = 0;
+  map.public_surface_baseline = 0;
+  writeFileSync(join(dir, '.brandmap.json'), JSON.stringify(map, null, 2));
   for (const [rel, body] of Object.entries(files)) {
     const abs = join(dir, rel);
     mkdirSync(dirname(abs), { recursive: true });
@@ -140,7 +151,9 @@ test('(control) a scan that reads no files EXITS 2, never 0', () => {
   const dir = mkdtempSync(join(tmpdir(), 'brand-lint-empty-'));
   try {
     execFileSync('git', ['-C', dir, 'init', '-q']);
-    copyFileSync(BRANDMAP, join(dir, '.brandmap.json'));
+    const m0 = JSON.parse(readFileSync(BRANDMAP, 'utf8'));
+    m0.id_baseline = 0; m0.public_surface_baseline = 0;
+    writeFileSync(join(dir, '.brandmap.json'), JSON.stringify(m0, null, 2));
     const { code } = runLint(dir); // nothing added -> git ls-files is empty
     assert.equal(code, 2, 'an empty scan is a broken scan, not a clean repo');
   } finally { rmSync(dir, { recursive: true, force: true }); }
@@ -289,5 +302,35 @@ test('(staged) ADDING prose with a deny term FAILS on public surface', () => {
     const { code, report } = runStaged(dir);
     assert.equal(report.public_surface, 1);
     assert.equal(code, 1);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('(migration baseline) a public-surface hit ABOVE the debt baseline FAILS', () => {
+  const dir = fixture({ 'README.md': `# Docs\n\nWe run ${OLLAMA}.\nAnd ${QWEN}.\n` });
+  try {
+    const p = join(dir, '.brandmap.json');
+    const m = JSON.parse(readFileSync(p, 'utf8'));
+    m.public_surface_baseline = 1;   // debt allows one, the tree has two
+    writeFileSync(p, JSON.stringify(m, null, 2));
+    const { code, report } = runLint(dir);
+    assert.equal(report.public_surface, 2);
+    assert.equal(code, 1, 'exceeding the migration debt must still fail');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('(migration baseline) it NEVER applies to a staged slice', () => {
+  const dir = fixture({ 'README.md': '# Clean\n' });
+  try {
+    const p = join(dir, '.brandmap.json');
+    const m = JSON.parse(readFileSync(p, 'utf8'));
+    m.public_surface_baseline = 999;  // a huge debt on the tree...
+    writeFileSync(p, JSON.stringify(m, null, 2));
+    execFileSync('git', ['-C', dir, 'add', '-A']);
+    execFileSync('git', ['-C', dir, 'commit', '-qm', 'base', '--no-verify']);
+    writeFileSync(join(dir, 'README.md'), `# Clean\n\nWe run ${OLLAMA}.\n`);
+    execFileSync('git', ['-C', dir, 'add', '-A']);
+    const r = spawnSync(process.execPath, [LINTER, '--json', '--staged', `--root=${dir}`], { encoding: 'utf8' });
+    assert.equal(r.status, 1,
+      '...must never excuse a line the author is adding right now');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

@@ -88,7 +88,7 @@ const BIN = new Set(MAP.binary_ext || []);
 // Deliberately separate from the deny list: the deny list says "this name may
 // not appear on a public surface", this says "this occurrence is a wire-level
 // name, so renaming it is a compatibility change" (BRANDING.md §5).
-const ID_ROOT = /(ollama|qwen|whisper|piper|nomic|deepseek|codellama|starcoder|mistral|gemma)/i;
+const ID_ROOT = /(ollama|qwen|whisper|piper|nomic|deepseek|codellama|starcoder|mistral|gemma|anthropic|openai)/i;
 const DOC_EXT = new Set(['.md', '.mdx', '.txt', '.rst']);
 
 function isExempt(rel) {
@@ -153,6 +153,9 @@ function classify(rel, line) {
   for (const m of line.matchAll(/\/(?![/*])((?:\\.|\[[^\]]*\]|[^/\n\\])+)\/[gimsuy]*/g)) {
     if (ID_ROOT.test(m[1])) return 'ID';          // regex literal matching upstream text
   }
+  // KEY=value in an env file: the VALUE is a wire identifier, the key is not.
+  const envAssign = /^[\s#]*[A-Z][A-Z0-9_]*\s*=\s*(.+)$/.exec(line);
+  if (envAssign && ID_ROOT.test(envAssign[1])) return 'ID';
   return 'CODE';
 }
 
@@ -302,11 +305,21 @@ const counts = findings.reduce((a, f) => ((a[f.class] = (a[f.class] || 0) + 1), 
 const publicSurface = (counts.DOC || 0) + (counts.CODE || 0);
 const idCount = counts.ID || 0;
 const idBaseline = Number.isInteger(MAP.id_baseline) ? MAP.id_baseline : 0;
+// A PUBLIC-SURFACE baseline is only ever a migration aid for a repository that
+// is still PRIVATE. It carries a terminal condition: it must reach 0 before the
+// repository may be made public. It is deliberately noisy on every run, because
+// a debt nobody is reminded of is a debt nobody pays.
+const pubBaseline = Number.isInteger(MAP.public_surface_baseline)
+  ? MAP.public_surface_baseline
+  : 0;
 // --stdin and --staged scan a slice, so a baseline comparison is meaningless
 // there: any ID hit in a slice is a hit the author just touched.
 const sliceMode = MODE_STDIN || MODE_STAGED;
 const idRegression = sliceMode ? idCount > 0 : idCount > idBaseline;
-const failed = publicSurface > 0 || idRegression;
+// In a slice (staged/stdin) any public-surface hit is one the author just
+// wrote, so the baseline never applies there.
+const pubRegression = sliceMode ? publicSurface > 0 : publicSurface > pubBaseline;
+const failed = pubRegression || idRegression;
 
 const report = {
   tool: 'brand-lint',
@@ -318,6 +331,7 @@ const report = {
   public_surface: publicSurface,
   id_hits: idCount,
   id_baseline: sliceMode ? null : idBaseline,
+  public_surface_baseline: sliceMode ? null : pubBaseline,
   failed,
   by_class: findings.reduce((a, f) => ((a[f.class] = (a[f.class] || 0) + 1), a), {}),
   by_rule: findings.reduce((a, f) => ((a[f.rule] = (a[f.rule] || 0) + 1), a), {}),
@@ -337,8 +351,15 @@ if (MODE_JSON) {
     `brand-lint: ${scanned} file(s) scanned · public-surface ${publicSurface} (must be 0) · ` +
     `identifiers ${idCount}${sliceMode ? '' : `/${idBaseline} baseline`}\n`
   );
-  if (publicSurface > 0) {
+  if (pubRegression) {
     process.stdout.write('brand-lint: FAIL — a forbidden term is on a public surface.\n');
+  }
+  if (!sliceMode && pubBaseline > 0) {
+    process.stdout.write(
+      `brand-lint: WARNING — public-surface debt held at ${publicSurface}/${pubBaseline}. ` +
+      'This baseline is a migration aid for a PRIVATE repository and MUST reach 0 ' +
+      'before this repository is made public.\n'
+    );
   }
   if (idRegression) {
     process.stdout.write(
@@ -355,4 +376,7 @@ if (MODE_JSON) {
     );
   }
 }
-process.exit(failed ? 1 : 0);
+// process.exit() truncates a pending stdout write when stdout is a pipe, which
+// silently corrupted the --json report on a repo with ~800 findings (the JSON
+// ended mid-string). Setting exitCode lets Node flush and exit on its own.
+process.exitCode = failed ? 1 : 0;
