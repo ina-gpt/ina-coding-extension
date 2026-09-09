@@ -28,7 +28,7 @@
  * A scan that reads nothing exits 2, never 0. "We could not look" and
  * "there is nothing there" are different answers.
  */
-import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve, dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,6 +41,11 @@ const MODE_JSON = argv.includes('--json');
 // --provenance-guard is a placement check, not a text check: the NDA-scoped
 // provenance document must never be tracked in a repository the public can read.
 const MODE_PROV = argv.includes('--provenance-guard');
+// --model-licence-guard: a model this system SERVES must have a licence row.
+// The gap it closes: aya-expanse:8b sat in the serving fleet under CC-BY-NC-4.0
+// with nothing recording its terms, because weight licences are invisible to
+// the software-dependency notices generator.
+const MODE_MLIC = argv.includes('--model-licence-guard');
 const rootArg = argv.find((a) => a.startsWith('--root='));
 // --dir scans a plain directory tree with no git. It exists for SHIPPED
 // ARTIFACTS: an unpacked .vsix is a public surface that a `git ls-files` scan
@@ -52,6 +57,89 @@ const REPO = rootArg ? resolve(rootArg.slice('--root='.length)) : resolve(HERE, 
 function die(msg) {
   process.stderr.write(`brand-lint: FATAL ${msg}\n`);
   process.exit(2);
+}
+
+/* ----------------------------------------------- model-licence-guard mode */
+if (MODE_MLIC) {
+  const LEDGER = join(REPO, 'docs/licenses/MODEL_LICENCES.md');
+  if (!existsSync(LEDGER)) die(`docs/licenses/MODEL_LICENCES.md not found under ${REPO}`);
+  const ledger = readFileSync(LEDGER, 'utf8').toLowerCase();
+
+  // A model id looks like `family[.ver][-variant]:size`. It must NOT match a
+  // host:port pair or a credential.
+  //
+  // The first version of this guard scanned .env line-by-line with a loose
+  // `\w+:\w+` shape. It matched `localhost:11436`, `stun:<ip>` — and it printed
+  // the DATABASE_URL password to stdout, which is precisely the failure this
+  // programme's secret gate exists to prevent. Two changes follow from that:
+  // read only the KEYS that name models, and never echo a value that did not
+  // match the model shape.
+  // The tag may be a size (`:14b`, `:30b-a3b`) OR a name (`:latest`). Requiring
+  // a leading digit silently skipped `devstral:latest` and
+  // `nomic-embed-text:latest` — both served — so the guard reported 5 of 7 and
+  // called it clean. A guard that quietly narrows its own input set is the same
+  // defect as one that cannot fail.
+  const MODEL_ID = /^[a-z][a-z0-9.]*(?:-[a-z0-9.]+)*:[a-z0-9][a-z0-9.-]*$/;
+  const NOT_A_MODEL = /^(localhost|stun|turn|https?|redis|rediss|postgres|postgresql|mysql|amqp|ws|wss|file|smtp|imap|s3|gs|mongodb)$/;
+  const looksLikeModel = (v) => {
+    if (!MODEL_ID.test(v)) return false;
+    const scheme = v.split(':')[0];
+    if (NOT_A_MODEL.test(scheme)) return false;
+    // a port is all digits; a model tag never is
+    if (/^[0-9]+$/.test(v.split(':')[1])) return false;
+    return true;
+  };
+
+  const seen = new Map();
+  let read = 0;
+
+  // 1. engine host spec: `- { name: "<model>", digest_prefix: ... }`
+  const spec = join(REPO, 'ops/engine-host/host-spec.yaml');
+  if (existsSync(spec)) {
+    read++;
+    for (const m of readFileSync(spec, 'utf8').matchAll(/name:\s*"([^"]+)"/g)) {
+      const v = m[1].trim().toLowerCase();
+      if (looksLikeModel(v) && !seen.has(v)) seen.set(v, 'ops/engine-host/host-spec.yaml');
+    }
+  }
+  // 2. warmup manifest: the declared resident set
+  for (const rel of ['ops/host/ollama-warmup.sh', 'scripts/ollama-warmup.sh']) {
+    const w = join(REPO, rel);
+    if (!existsSync(w)) continue;
+    read++;
+    const mm = /WARMUP_MANIFEST\s*=\s*"([^"]*)"/.exec(readFileSync(w, 'utf8'));
+    if (mm) for (const v of mm[1].split(/\s+/)) {
+      const id = v.trim().toLowerCase();
+      if (looksLikeModel(id) && !seen.has(id)) seen.set(id, rel);
+    }
+  }
+  // 3. .env — ONLY keys that name a model. Never the whole file.
+  const envp = join(REPO, '.env');
+  if (existsSync(envp)) {
+    read++;
+    for (const line of readFileSync(envp, 'utf8').split('\n')) {
+      const kv = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line.trim());
+      if (!kv) continue;
+      const [, k, rawv] = kv;
+      if (!/(_MODEL|^ROUTER_TIER_)/.test(k)) continue;   // key allowlist, not a value scan
+      const v = rawv.replace(/^["']|["']$/g, '').trim().toLowerCase();
+      if (looksLikeModel(v) && !seen.has(v)) seen.set(v, `.env:${k}`);
+    }
+  }
+
+  if (read === 0) die(`no serving config found under ${REPO} — a guard that read nothing is not a pass`);
+  if (seen.size === 0) die(`no model id parsed from ${read} serving config(s) — refusing to report clean`);
+
+  const missing = [...seen.entries()].filter(([id]) => !ledger.includes(id));
+  if (missing.length) {
+    for (const [id, src] of missing) {
+      process.stdout.write(`${src}: [MODEL-LICENCE] "${id}" is served but has no row in docs/licenses/MODEL_LICENCES.md\n`);
+    }
+    process.stdout.write(`brand-lint --model-licence-guard: FAIL — ${missing.length} served model(s) without a licence row.\n`);
+    process.exit(1);
+  }
+  process.stdout.write(`brand-lint --model-licence-guard: OK — ${seen.size} served model id(s) across ${read} config(s), all present in the licence ledger.\n`);
+  process.exit(0);
 }
 
 /* -------------------------------------------------- provenance-guard mode */
@@ -339,15 +427,27 @@ if (MODE_STDIN) {
   const base = resolve(dirArg.slice('--dir='.length));
   if (!existsSync(base)) die(`--dir target does not exist: ${base}`);
   const NUL = String.fromCharCode(0);
+  // statSync FOLLOWS symlinks; Dirent.isDirectory() does not. See the scar note
+  // in secret-lint's walker — the same blindness, the same fix.
+  const visited = new Set();
   const walk = (abs, rel) => {
-    for (const ent of readdirSync(abs, { withFileTypes: true })) {
+    let ents;
+    try { ents = readdirSync(abs, { withFileTypes: true }); } catch { return; }
+    for (const ent of ents) {
       const a = join(abs, ent.name);
       const r = rel ? `${rel}/${ent.name}` : ent.name;
-      if (ent.isDirectory()) { walk(a, r); continue; }
-      if (!ent.isFile()) continue;
+      let st;
+      try { st = statSync(a); } catch { continue; }
+      if (st.isDirectory()) {
+        let real; try { real = realpathSync(a); } catch { continue; }
+        if (visited.has(real)) continue;
+        visited.add(real);
+        walk(a, r);
+        continue;
+      }
+      if (!st.isFile()) continue;
       if (isExempt(r)) continue;
       if (BIN.has(extname(r).toLowerCase())) continue;
-      let st; try { st = statSync(a); } catch { continue; }
       if (st.size > 32 * 1024 * 1024) continue;
       let text; try { text = readFileSync(a, 'utf8'); } catch { continue; }
       if (text.includes(NUL)) continue;

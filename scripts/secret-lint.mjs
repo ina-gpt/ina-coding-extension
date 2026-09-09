@@ -218,6 +218,11 @@ if (MODE_REMOTES) {
   if (!existsSync(base)) die(`--dir target does not exist: ${base}`);
   const SKIPD = new Set(['.png','.jpg','.jpeg','.gif','.webp','.ico','.pdf','.zip','.gz','.tgz','.woff','.woff2','.ttf','.mp3','.mp4','.wav','.node','.wasm','.so','.dylib','.class','.jar']);
   const NULC = String.fromCharCode(0);
+  // Dirent.isDirectory() does NOT follow symlinks: a symlinked directory is
+  // reported as a link, so this walk used to step straight over it. That is the
+  // same blindness that hid a live credential for a whole phase, reintroduced in
+  // a different mode. statSync FOLLOWS; realpath guards against a link cycle.
+  const visited = new Set();
   const walk = (dir, rel, depth) => {
     if (depth > 12) return;
     let ents;
@@ -225,10 +230,17 @@ if (MODE_REMOTES) {
     for (const e of ents) {
       const abs = join(dir, e.name);
       const r = rel ? `${rel}/${e.name}` : e.name;
-      if (e.isDirectory()) { walk(abs, r, depth + 1); continue; }
-      if (!e.isFile()) continue;
+      let st;
+      try { st = statSync(abs); } catch { continue; }
+      if (st.isDirectory()) {
+        let real; try { real = realpathSync(abs); } catch { continue; }
+        if (visited.has(real)) continue;
+        visited.add(real);
+        walk(abs, r, depth + 1);
+        continue;
+      }
+      if (!st.isFile()) continue;
       if (SKIPD.has(extname(r).toLowerCase())) continue;
-      let st; try { st = statSync(abs); } catch { continue; }
       if (st.size > 512 * 1024 * 1024) { scanned++; continue; }
       let text; try { text = readFileSync(abs, 'utf8'); } catch { continue; }
       if (text.includes(NULC)) continue;

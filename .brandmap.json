@@ -140,7 +140,8 @@
     "tests/secret-lint.negative.test.mjs",
     "scripts/claim-audit.mjs",
     "tests/self-hosted.test.cjs",
-    ".secretlintignore"
+    ".secretlintignore",
+    "tests/traversal.symlink.test.mjs"
   ],
   "binary_ext": [
     ".png",
