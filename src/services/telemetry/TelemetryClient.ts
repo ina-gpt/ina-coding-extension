@@ -49,14 +49,14 @@ export class TelemetryClient {
     this.getHeaders = headersFn;
     this.enabled = vscode.workspace
       .getConfiguration('inaCoding.telemetry')
-      .get<boolean>('enabled', true);
+      .get<boolean>('enabled', false);
     this.sessionHash = crypto.randomBytes(8).toString('hex');
 
     this.configListener = vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('inaCoding.telemetry.enabled')) {
         this.enabled = vscode.workspace
           .getConfiguration('inaCoding.telemetry')
-          .get<boolean>('enabled', true);
+          .get<boolean>('enabled', false);
       }
     });
 

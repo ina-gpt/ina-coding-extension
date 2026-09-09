@@ -66,9 +66,13 @@ test('TELEMETRY DEFAULTS are pinned, so a silent flip shows up as a diff', () =>
   // the README says. They are deliberately NOT asserted to be "privacy-safe" —
   // that is a product decision, and this test's job is visibility, not policy.
   const pinned = {
-    'inaCoding.telemetry.enabled': true,
-    'inaCoding.telemetry.abTesting': true,
-    'inaCoding.telemetry.modelRouting': true,
+    // Flipped to false on 2026-09-09 after tests/telemetry-default.test.cjs
+    // proved that an empty configuration still sent telemetry. Origin of the
+    // `true` defaults AND of the contradicting README claim: commit 3cf5f96,
+    // the initial commit — they were inconsistent from day one.
+    'inaCoding.telemetry.enabled': false,
+    'inaCoding.telemetry.abTesting': false,
+    'inaCoding.telemetry.modelRouting': false,
     'inaCoding.telemetry.retentionDays': 180,
     'inaCoding.privacy.telemetry': 'off',
     'inaCoding.privacy.encryptAtRest': true,

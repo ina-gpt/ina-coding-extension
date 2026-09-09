@@ -2,8 +2,8 @@
   "name": "ina-coding",
   "displayName": "INA Coding — AI Code Assistant",
   "description": "Self-hosted AI coding assistant with chat, inline edit (Cmd+K), tab completion, agent mode, codebase search, documentation RAG, memory, and design-to-code. GDPR compliant. Made in Germany.",
-  "version": "1.0.0",
-  "publisher": "inagpt",
+  "version": "1.1.0",
+  "publisher": "ina-gpt",
   "author": {
     "name": "INA GPT GmbH",
     "email": "contact@inagpt.com",
@@ -6725,13 +6725,13 @@
         },
         "inaCoding.telemetry.enabled": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Anonymisierte Nutzungsstatistiken zur Qualitätsverbesserung erfassen. Es werden niemals Code-Inhalte, Dateinamen oder Prompts gespeichert. Alle Daten verbleiben auf Ihrem Server.",
           "markdownDescription": "**Anonyme Telemetrie**: Erfasst Nutzungsstatistiken (Feature-Nutzung, Antwortzeiten, Akzeptanzraten) zur Qualitätsverbesserung.\n\n**Niemals gespeichert:** Code, Prompts, Dateinamen, E-Mail, IP.\n\n**Speicherort:** Nur auf Ihrem Server.\n\n**Aufbewahrung:** 180 Tage, dann automatisch gelöscht.\n\n**DSGVO:** Art. 6 Abs. 1 lit. f — berechtigtes Interesse. Jederzeit deaktivierbar."
         },
         "inaCoding.telemetry.abTesting": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "UX-Optimierung durch A/B-Tests erlauben. Betrifft nur die Benutzeroberfläche, nie KI-Inhalte."
         },
         "inaCoding.telemetry.retentionDays": {
@@ -6743,7 +6743,7 @@
         },
         "inaCoding.telemetry.modelRouting": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "KI-Modellauswahl basierend auf Telemetrie-Daten optimieren"
         },
         "inaCoding.telemetry.detailLevel": {
@@ -7059,7 +7059,8 @@
     "brand-lint": "node scripts/brand-lint.mjs",
     "test:brand": "node --test tests/brand-lint.negative.test.mjs",
     "test:claims": "node --require ./tests/vscode-stub.cjs --test tests/claims.test.cjs",
-    "test:unit": "npm run test:brand && npm run test:claims"
+    "test:unit": "npm run test:brand && npm run test:claims && npm run test:telemetry",
+    "test:telemetry": "node --require ./tests/vscode-stub.cjs --test tests/telemetry-default.test.cjs"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",

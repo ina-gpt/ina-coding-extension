@@ -150,20 +150,25 @@ Roadmap in the same commit (see [BRANDING.md](BRANDING.md) §4).
   → `tests/claims.test.cjs` · `src/services/codesec/EphemeralPolicyEnforcer.ts`
 - **RBAC** — role-based access control with API key management and team roles.
   → `tests/claims.test.cjs` · `src/services/access/AccessTypes.ts`
+- **Zero telemetry by default** — with no configuration present, the extension
+  sends no telemetry request at all. Proven at runtime, not asserted: the test
+  boots the client against an empty configuration, intercepts every outbound
+  request and asserts none reaches a telemetry endpoint.
+  → `tests/telemetry-default.test.cjs` · `src/services/telemetry/TelemetryClient.ts`
 
 **Data protection.** Code is processed on the infrastructure you operate.
 INA GPT GmbH offers an Auftragsverarbeitungsvertrag under Art. 28 GDPR, with a
 named Geschäftsführer and a German court of jurisdiction. Where INA GPT GmbH
 operates the service, processing takes place in Germany.
 
-**Telemetry — read this before deploying in a regulated environment.**
-Anonymised usage statistics are **enabled by default**
-(`inaCoding.telemetry.enabled`, `.abTesting`, `.modelRouting`), retained for up
-to 180 days (`inaCoding.telemetry.retentionDays`). Per the setting
-descriptions, code content, file names and prompts are not collected, and data
-remains on your server. Set `inaCoding.telemetry.enabled` to `false` to disable
-collection entirely. Defaults are pinned by a test so they cannot change
-silently.
+**Telemetry.** Off by default. `inaCoding.telemetry.enabled`, `.abTesting` and
+`.modelRouting` all ship `false`, and the client carries the same default in
+code, so an installation with nothing configured sends nothing. If you switch it
+on, anonymised usage statistics are retained for up to 180 days
+(`inaCoding.telemetry.retentionDays`); per the setting descriptions, code
+content, file names and prompts are never collected, and data remains on your
+server. Both the manifest defaults and the code fallback are pinned by tests, so
+neither can change silently.
 
 ---
 
@@ -173,9 +178,6 @@ Listed here rather than under Features because the claim is not yet proven by
 an implementation and a test in this repository. This section exists so the
 Features list stays honest.
 
-- **Telemetry off by default.** The current shipped defaults enable anonymised
-  telemetry. Making "off" the default is a product decision that has not been
-  taken; until it is, the Features list does not claim it.
 - **Tamper-resistant hash-chain audit trail.** The extension renders a chain
   integrity result returned by the server (`AuditLogViewer`), but the chain
   itself is implemented and verified server-side. No client-side implementation
@@ -228,7 +230,7 @@ INA Coding ships 300+ settings. The ones most deployments touch:
 | `inaCoding.privacy.mode` | `standard` | Privacy mode (standard/strict/local_only) |
 | `inaCoding.privacy.encryptAtRest` | `true` | Encrypt locally stored data |
 | `inaCoding.privacy.secretDetection` | `true` | Detect and mask secrets before sending |
-| `inaCoding.telemetry.enabled` | `true` | Anonymised usage statistics |
+| `inaCoding.telemetry.enabled` | `false` | Anonymised usage statistics (opt-in) |
 | `inaCoding.completion.enabled` | `true` | Enable tab completion |
 | `inaCoding.agent.requireApproval` | `true` | Require plan approval |
 | `inaCoding.ui.theme` | `auto` | Theme (auto/light/dark) |
