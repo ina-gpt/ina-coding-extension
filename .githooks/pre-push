@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Pre-push: a credentialed remote must be caught BEFORE it is ever used.
+#
+# The leak on this host sat in .git/config for five months and was used on every
+# fetch. Nothing looked at it, because a remote URL is not a tracked file.
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+if command -v node >/dev/null 2>&1 && [ -f "$ROOT/scripts/secret-lint.mjs" ]; then
+  if ! node "$ROOT/scripts/secret-lint.mjs" --remotes --scan="$ROOT"; then
+    cat >&2 <<'MSG'
+
+secret-lint: a credential is embedded in a git remote URL in this repository.
+
+            The credential is in .git/config, which is NOT tracked, so removing
+            it from the working tree changes nothing. Fix the remote itself:
+
+              git remote set-url origin git@github.com:<org>/<repo>.git
+
+            and ROTATE the credential — it has been sent to the remote on every
+            fetch and push since it was set.
+MSG
+    exit 1
+  fi
+fi

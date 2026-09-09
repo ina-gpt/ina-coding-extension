@@ -135,7 +135,12 @@
     "scripts/surface-lint.mjs",
     "tests/telemetry-default.test.cjs",
     "tests/claims.test.cjs",
-    "tests/vscode-stub.cjs"
+    "tests/vscode-stub.cjs",
+    "scripts/secret-lint.mjs",
+    "tests/secret-lint.negative.test.mjs",
+    "scripts/claim-audit.mjs",
+    "tests/self-hosted.test.cjs",
+    ".secretlintignore"
   ],
   "binary_ext": [
     ".png",
@@ -204,7 +209,7 @@
   "public_surface_baseline": 0,
   "surface_exemptions": [
     {
-      "reason": "LEGAL DISCLOSURE. A GDPR Art. 28(4) subprocessor list, a DPA, an Impressum and a privacy policy must name the ACTUAL processors and legal entities. Suppressing a real subprocessor name to satisfy a branding preference is a transparency breach, and is the same class of error as stripping an Apache-2.0 attribution notice. This exemption exists for exactly the reason the LICENSE exemption exists.",
+      "reason": "LEGAL DISCLOSURE. A subprocessor list, a DPA, an Impressum and a privacy policy must name the ACTUAL processors and legal entities. The duty arises from Art. 13(1)(e) GDPR (recipients or categories of recipients) and the transparency principle in Art. 5(1)(a); Art. 28(2) governs prior authorisation and notice of subprocessor changes, and Art. 28(4) governs the contractual flow-down, NOT the public disclosure itself. Suppressing a real subprocessor name to satisfy a branding preference is a transparency failure, and is the same class of error as stripping an Apache-2.0 attribution notice.",
       "url_patterns": [
         "/subprocessors",
         "/dpa",

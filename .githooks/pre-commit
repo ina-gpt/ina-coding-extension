@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# brand-lint pre-commit hook — see BRANDING.md.
-# Enabled per clone with:  git config core.hooksPath .githooks
+# Pre-commit chain: brand-lint then secret-lint, both on STAGED content only.
+# See BRANDING.md for the naming rule; secret-lint covers the credential
+# channels that actually leaked on this host.
 #
-# pipefail is set because a piped lint whose exit code is the filter's would
-# let every violation through while looking like it ran.
+# pipefail is set because a piped lint whose exit code is the filter's would let
+# every violation through while looking like it ran.
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "brand-lint: node not found — cannot verify branding. Refusing the commit." >&2
+  echo "pre-commit: node not found — cannot verify. Refusing the commit." >&2
   echo "            (install Node 18+, or bypass deliberately with --no-verify)" >&2
   exit 1
 fi
 
-if ! node "$ROOT/scripts/brand-lint.mjs" --staged; then
+if [ -f "$ROOT/scripts/brand-lint.mjs" ] && ! node "$ROOT/scripts/brand-lint.mjs" --staged; then
   cat >&2 <<'MSG'
 
 brand-lint: this commit adds a forbidden term on a line it introduces.
@@ -27,6 +28,21 @@ brand-lint: this commit adds a forbidden term on a line it introduces.
 
             If a hit is a protocol or config identifier, do not rename it:
             add the canonical name and keep the old one as a deprecated alias.
+MSG
+  exit 1
+fi
+
+if [ -f "$ROOT/scripts/secret-lint.mjs" ] && ! node "$ROOT/scripts/secret-lint.mjs" --staged; then
+  cat >&2 <<'MSG'
+
+secret-lint: this commit adds a credential on a line it introduces.
+
+            Do NOT "fix" this by editing the line and committing anyway — if the
+            value was ever real, it is already compromised and must be ROTATED,
+            not hidden. Revoke it first, then remove it.
+
+            Pass credentials through the environment or a credential helper,
+            never inline and never in a remote URL.
 MSG
   exit 1
 fi
