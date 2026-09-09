@@ -260,7 +260,7 @@ async function selftest() {
   // the legal carve-out becomes a hole in the whole rule.
   const HETZ = ['Het', 'zner'].join('');
   h = await serve(`<html><body><h1>Subprocessors</h1><p>Hosting: ${HETZ} Online GmbH, Germany.</p></body></html>`);
-  check('a real subprocessor named on /subprocessors PASSES (GDPR Art. 28(4))',
+  check('a real subprocessor named on /subprocessors PASSES (GDPR Art. 13(1)(e))',
     await call(h.port, [], '/subprocessors'), 0);
   h.srv.close();
 

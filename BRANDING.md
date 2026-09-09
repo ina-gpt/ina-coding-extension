@@ -51,8 +51,8 @@ rest of this standard defensible rather than deceptive.
 
 A page whose PURPOSE is legal disclosure must name real entities:
 
-- a **GDPR Art. 28(4) subprocessor list** must name the actual subprocessors,
-  including the hosting provider;
+- a **subprocessor list** must name the actual subprocessors, including the
+  hosting provider;
 - a **DPA / AVV**, an **Impressum** and a **privacy policy** must name the real
   controller, processors and jurisdictions;
 - **developer API documentation** must name the client SDK a caller is expected
@@ -61,10 +61,29 @@ A page whose PURPOSE is legal disclosure must name real entities:
 - a **negative comparative** ("we do not use X") names a vendor precisely in
   order to disclaim it, which is the opposite of the claim this standard forbids.
 
-Suppressing a real subprocessor's name on a subprocessor page to satisfy a
-branding preference is a transparency breach. It is the same class of error as
-stripping an Apache-2.0 attribution notice, and it is refused for the same
-reason: **a legal obligation outranks a naming preference.**
+### The legal basis, stated precisely
+
+An earlier version of this section cited **Art. 28(4) GDPR** as the source of
+the disclosure duty. That was imprecise, and the citation is corrected here.
+The decision does not change; only its basis is stated accurately.
+
+| Provision | What it actually governs |
+|---|---|
+| **Art. 13(1)(e)** | Information to the data subject: the **recipients or categories of recipients** of personal data. This — with Art. 14(1)(e) for indirectly collected data — is the duty that makes a subprocessor disclosure necessary. |
+| **Art. 5(1)(a)** | The general principle of lawfulness, fairness and **transparency**, which the disclosure serves. |
+| **Art. 28(2)** | The controller's **prior authorisation** of subprocessors, and the processor's duty to **inform** of intended additions or replacements. |
+| **Art. 28(4)** | The **flow-down by contract** of the same data-protection obligations to the subprocessor. It binds the processor–subprocessor contract; it is not the source of the public disclosure duty. |
+| **Art. 30(1)(d)** | Records of processing: categories of recipients, including recipients in third countries. |
+
+**Therefore:** naming the actual subprocessor on `/subprocessors` and `/dpa` is
+correct and stays. Suppressing a real subprocessor's name to satisfy a branding
+preference would be a transparency failure under Art. 13(1)(e) and Art. 5(1)(a).
+
+The standing principle is unchanged and restated: **a legal disclosure
+obligation outranks a naming preference.** It is the same reason `LICENSE` and
+`THIRD_PARTY_NOTICES` are exempt in §3 — attribution there is an Apache-2.0
+condition, and neither exemption is a loophole in the standard; both are the
+standard recognising a duty it cannot override.
 
 Measured on 2026-09-09: all 19 denylist hits on the live site were of exactly
 these kinds — 11 on `/docs/api`, 4 on `/subprocessors`, 2 on `/dpa`, 2 on
