@@ -47,6 +47,33 @@ only in those files. That separation — legal compliance in the licence files,
 product naming everywhere else — is the whole design, and it is what makes the
 rest of this standard defensible rather than deceptive.
 
+## 3b. Legal-disclosure surfaces are exempt for the same reason
+
+A page whose PURPOSE is legal disclosure must name real entities:
+
+- a **GDPR Art. 28(4) subprocessor list** must name the actual subprocessors,
+  including the hosting provider;
+- a **DPA / AVV**, an **Impressum** and a **privacy policy** must name the real
+  controller, processors and jurisdictions;
+- **developer API documentation** must name the client SDK a caller is expected
+  to use — an OpenAI-compatible endpoint cannot be documented without the words
+  "OpenAI-compatible";
+- a **negative comparative** ("we do not use X") names a vendor precisely in
+  order to disclaim it, which is the opposite of the claim this standard forbids.
+
+Suppressing a real subprocessor's name on a subprocessor page to satisfy a
+branding preference is a transparency breach. It is the same class of error as
+stripping an Apache-2.0 attribution notice, and it is refused for the same
+reason: **a legal obligation outranks a naming preference.**
+
+Measured on 2026-09-09: all 19 denylist hits on the live site were of exactly
+these kinds — 11 on `/docs/api`, 4 on `/subprocessors`, 2 on `/dpa`, 2 on
+`/technology`. Zero were brand violations.
+
+The exemption is URL-scoped and term-scoped in `.brandmap.json`
+(`surface_exemptions`), never global. `scripts/surface-lint.mjs --selftest`
+proves it is narrow: the same term on an ordinary marketing page still fails.
+
 ## 4. Claims discipline (§5 UWG)
 
 German unfair-competition law permits an absolute-supremacy claim only where it

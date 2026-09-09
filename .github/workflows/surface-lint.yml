@@ -1,0 +1,101 @@
+name: surface-lint
+
+# A one-time scan of a live website has no durable value: the site changes after
+# the scan. This runs weekly and opens an issue on any NEW hit, so a term added
+# to a marketing page months from now still surfaces.
+#
+# Legal-disclosure and API-interoperability surfaces are exempt by URL and by
+# term (BRANDING.md §3b) — a subprocessor list must name real subprocessors.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'      # Mondays 06:17 UTC
+  workflow_dispatch:
+  push: {}                    # so per-push check suites resolve instead of
+                              # reporting "No jobs were run" (ci-discipline.md #4)
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  surface-lint:
+    # Schedule-only in practice: a push must not spend a minute crawling a
+    # website, and the local gates already cover the tree.
+    if: ${{ github.event_name != 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Scanner negative proof (it must be able to fail)
+        run: node scripts/surface-lint.mjs --selftest
+
+      - name: Scan the live surface
+        id: scan
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          node scripts/surface-lint.mjs \
+            --url=https://inagpt.com --depth=2 --max=40 --json > surface-report.json
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surface-report
+          path: surface-report.json
+          if-no-files-found: warn
+
+      - name: Open an issue on any violation
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let rep;
+            try {
+              rep = JSON.parse(fs.readFileSync('surface-report.json', 'utf8'));
+            } catch (e) {
+              // A crawl that produced no report is UNKNOWN, never clean, and must
+              // be as loud as a violation.
+              core.setFailed('surface-lint produced no parseable report — treat as UNKNOWN, not clean');
+              return;
+            }
+            if (!rep.violations) {
+              core.info(`surface-lint clean: ${rep.pages_scanned} page(s), ${rep.exempted_count} documented exemption(s)`);
+              return;
+            }
+            const lines = rep.findings.map(f => `- \`${f.url}\` — **${f.term}** (${f.severity})\n  > ${String(f.context).slice(0, 200)}`);
+            const body = [
+              `surface-lint found ${rep.violations} violation(s) on ${rep.origin}.`,
+              '',
+              `Pages scanned: ${rep.pages_scanned} · fetch errors: ${rep.fetch_errors} · exempted (legal/interop): ${rep.exempted_count}`,
+              '',
+              ...lines,
+              '',
+              'See BRANDING.md. If a hit is a legal-disclosure or API-interoperability',
+              'surface, add a scoped entry to `surface_exemptions` in `.brandmap.json`',
+              'with its reason — never widen the denylist itself.',
+            ].join('\n');
+            const title = `surface-lint: ${rep.violations} violation(s) on ${rep.origin}`;
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'surface-lint',
+            });
+            const dupe = existing.data.find(i => i.title === title);
+            if (dupe) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: dupe.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['surface-lint'],
+              });
+            }
+            core.setFailed(`${rep.violations} surface violation(s)`);
