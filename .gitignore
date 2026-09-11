@@ -13,3 +13,9 @@ out/
 
 # Enterprise documentation is NDA-scoped and lives in ina-coding-enterprise-docs
 docs/enterprise/
+
+# Point-in-time audit evidence: local forensic output, never tracked.
+.evidence/
+
+# vsce output — the packaged artifact is a build product, never tracked.
+artifact/

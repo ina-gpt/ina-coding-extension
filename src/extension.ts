@@ -122,6 +122,7 @@ import { ConnectivityMonitor } from './services/offline/ConnectivityMonitor';
 import { OfflineQueue } from './services/offline/OfflineQueue';
 import { SyncManager } from './services/offline/SyncManager';
 import { LocalModelManager } from './services/offline/LocalModelManager';
+import { OfflineManifestStore, OFFLINE_NOT_PROVISIONED } from './services/offline/OfflineManifest';
 import { GracefulDegradation } from './services/offline/GracefulDegradation';
 import { OfflineSearchFallback } from './services/offline/OfflineSearchFallback';
 
@@ -1298,7 +1299,23 @@ export async function activate(context: vscode.ExtensionContext) {
     const offlineSearchFallback = OfflineSearchFallback.getInstance();
 
     offlineQueue.initialize(context);
+
+    // Offline mode learns the runtime command and the model ids it may use from
+    // the server, never from this source tree. The cached copy is read first so
+    // a cold start with no network still works; the refresh runs behind it and
+    // re-initialises only if it actually changed anything.
+    const offlineManifestStore = new OfflineManifestStore(context);
+    localModelManager.useManifestStore(offlineManifestStore);
     localModelManager.initialize().catch(e => Logger.debug('Local model init:', e));
+    void (async () => {
+      try {
+        const headers = await apiService.authHeaders();
+        const refreshed = await offlineManifestStore.refresh(ConfigManager.getApiEndpoint(), headers);
+        if (refreshed) await localModelManager.initialize();
+      } catch (e) {
+        Logger.debug('[Offline] manifest refresh skipped:', e);
+      }
+    })();
     offlineSearchFallback.initialize().catch(e => Logger.debug('Offline search init:', e));
     connectivityMonitor.start();
 
@@ -1369,7 +1386,12 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.commands.registerCommand('inaCoding.downloadLocalModel', async () => {
         const suggestion = localModelManager.suggestModelDownload();
         if (!suggestion) {
-          vscode.window.showInformationMessage('Local model already available!');
+          // Two different nulls, two different messages. Reporting "already
+          // available" to a user who has never been online would be a plain
+          // untruth about why nothing happened.
+          vscode.window.showInformationMessage(
+            localModelManager.isAvailable() ? 'Local model already available!' : OFFLINE_NOT_PROVISIONED
+          );
           return;
         }
         const choice = await vscode.window.showInformationMessage(

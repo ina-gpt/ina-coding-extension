@@ -2,7 +2,7 @@ import {
   FIMTokens,
   FIMRequest,
   LANGUAGE_STOP_SEQUENCES,
-  getFIMTokensForModel,
+  getFIMTokens,
   getStopSequences,
 } from './FIMTypes';
 
@@ -21,10 +21,10 @@ export class FIMPromptBuilder {
   }
 
   buildPrompt(request: FIMRequest): { prompt: string; stopSequences: string[] } {
-    const tokens = getFIMTokensForModel(request.model);
+    const tokens = getFIMTokens();
     const prefix = this.preparePrefix(request.prefix, request);
     const suffix = this.prepareSuffix(request.suffix);
-    const stopSequences = getStopSequences(request.language, request.model);
+    const stopSequences = getStopSequences(request.language);
 
     const prompt = this.formatFIMPrompt(tokens, prefix, suffix, request);
 
@@ -75,7 +75,7 @@ export class FIMPromptBuilder {
     request: FIMRequest,
     relatedFiles: Array<{ path: string; content: string }>
   ): string {
-    const tokens = getFIMTokensForModel(request.model);
+    const tokens = getFIMTokens();
 
     if (!tokens.file) {
       // Model doesn't support multi-file, include as comments
@@ -111,7 +111,7 @@ export class FIMPromptBuilder {
 
     // Add file header comment if not using file tokens
     if (this.includeFileHeader && request.filePath) {
-      const tokens = getFIMTokensForModel(request.model);
+      const tokens = getFIMTokens();
       if (!tokens.file) {
         const ext = request.filePath.split('.').pop() || '';
         const comment = this.getCommentStyle(request.language);

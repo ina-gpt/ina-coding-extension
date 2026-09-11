@@ -1,25 +1,107 @@
 import * as vscode from 'vscode';
+import { createHash } from 'node:crypto';
 import { Logger } from './Logger';
+import {
+  ModelCapability,
+  defaultModel,
+  getDisplayName as registryDisplayName,
+  isInaModelId,
+} from '../config/model-registry';
 
 const CONFIG_SECTION = 'inaCoding';
 
-// ============ INA Model Branding ============
+// ============ Legacy settings migration ============
+//
+// This file used to hold a second model map — INA_MODEL_MAP / REVERSE_MODEL_MAP
+// — that contradicted src/config/model-registry.ts and was the map the product
+// actually used, because nothing imported the registry. That map translated an
+// INA display name into an upstream model id and handed the upstream id to the
+// server. The registry is now the single source of truth and the extension
+// sends an INA id; the server resolves it.
+//
+// A user who has been running this extension already has a value like
+// "INA-7 Pro" — or, if they used the webview retry picker, a raw upstream id —
+// persisted in their VS Code settings. Those values must keep working, so they
+// are migrated on read.
+//
+// WHY THE KEYS ARE DIGESTS
+//   Half of these legacy values ARE upstream model ids. This repository is
+//   public. A plaintext migration table would republish precisely the mapping
+//   the registry rewrite exists to remove, in a file whose whole purpose is to
+//   stop publishing it.
+//
+//   This is obfuscation, not confidentiality: a digest of a short, publicly
+//   known model id is recoverable by anyone who thinks to try a dictionary of
+//   model names. It is claimed as nothing more than "this repository no longer
+//   advertises the list". The plaintext source lives in the private policy
+//   repository and regenerates this table.
+//
+// Digests are SHA-256 of the exact persisted string, lower-cased before
+// hashing so a settings value that differs only in case still migrates.
+const LEGACY_MIGRATION = new Map<string, string>([
+  ['931bd4ca2f5201c97b48f4062d5658ca4826865ac9a6b761e79d53f26ba511ff', 'ina-8-coding-pro'],
+  ['e7fc5dc5f7c62d35933a9a11941c3f91b4a5e0bfabfad499ab70cb6f946df713', 'ina-8-coding'],
+  ['54420446bca9f0970ea79ce1362be320d095680215247ac98129d58e5f7e656f', 'ina-8-coding-lite'],
+  ['aa6fa1793d051621edb5811bb1dfc0faaafad350c4a59f1cffe5b5358bd2246a', 'ina-8-pro'],
+  ['48b72a4400239554846e945f46d26068080c054f710a324a283daa60683fb2b4', 'ina-8'],
+  ['60df1f77d9daff0df74ec20542cf9d1c630a9d619b7af84ae6ce496192443939', 'ina-embed'],
+  ['5ab7d838bfb421ba95a78283ac0b266ec113163230c2ccf9c84d013c6c108bd7', 'ina-embed'],
+  ['cccb702c301689328d378a6ffe96d90d23c3f292d228aa587c3905c6703d46df', 'ina-embed'],
+  ['f557f27d36a5097270c3dba259dae3c424994e916d40b2f65600992febfb7dec', 'ina-8-vision'],
+  ['848540ca64f06d9afb2529d59e9dd429db297657f695b170b94033c34836e871', 'ina-8-coding-pro'],
+  ['255ca0fdae881eb48ac9aa8f17ec0b7f5b3962e23f0524b3bb5fedffd3fa3b17', 'ina-8-pro'],
+  ['8286d092cb58243c94f0e7fbac787298cf96fdfd74ec1a82e8e98e5f0b17b451', 'ina-8-coding-lite'],
+  ['0e7b0e8855b9def44e989c5825d28910a3d90c90e86dbec10a53f8847739f502', 'ina-8-coding-pro'],
+  ['d9316f5ebed67d4014bd1b1c03076e665b7deeb53be6238120bedebf2c26f0c7', 'ina-8-coding'],
+  ['49b7701263a8f32ec45e1ab690d6a43ca211955979df99970b40cc462a2ca973', 'ina-8-coding-lite'],
+  ['4dbc741fbc7b50bd192f480d6dc3c985a8b67bd2862949b802e1892692a760a2', 'ina-8-coding-fast'],
+  ['46a7fdadcb4d5c007019a9af98c586ee443ed2cb82dfca6bdb16cb23401cea3c', 'ina-8-coding-fast'],
+  ['fa77660e39dcbad0f9af0bef3d5e9168a85f8679f0ec1d9fb777d4021d433232', 'ina-8-coding-fast'],
+  ['442789f441d800436716d2621ca1f15f036b1210d6468724d9e7eaae457f7ab6', 'ina-8-coding-fast'],
+  ['613573f7b5c9989c5860d1072fec711f3944931fdabb89d8abf292d21a3b7f20', 'ina-8-pro'],
+  ['801dcad02f38c48984c325de964ab7c9213d4c51f101cd2f6aeacff576868987', 'ina-8'],
+  ['0ef7445aefc83fdaf1914baedfb4b99289540d335c37eed656430cf3714ba456', 'ina-8-vision'],
+  ['a4134b0e39785810a45922e0b9dcf450702ce8d7d2514ef5d4c4ef3c81a08e5b', 'ina-embed'],
+  ['1aa5dd19c3d900f19e14fdc81f64128514d083934b997272a00e78061e766ac7', 'ina-embed'],
+  ['a51ea6ac970865616f6442c59374278d9c611ea1696f2603c11bfee662247789', 'ina-embed'],
+]);
 
-const INA_MODEL_MAP: Record<string, string> = {
-  'INA-7 Pro': 'qwen2.5-coder:32b',
-  'INA-7': 'qwen2.5-coder:14b',
-  'INA-7 Lite': 'qwen2.5-coder:7b',
-  'INA-6.2 Pro': 'qwen3:14b',
-  'INA-6.2': 'qwen3:8b',
-  'INA Embed': 'nomic-embed-text',
-  'INA Embed Large': 'mxbai-embed-large',
-  'INA Embed Mini': 'all-minilm',
-  'INA Vision': 'qwen2.5vl:7b',
-};
+/** SHA-256 of the lower-cased value, memoised — this runs on every request. */
+const digestCache = new Map<string, string>();
+function digest(value: string): string {
+  let d = digestCache.get(value);
+  if (d === undefined) {
+    d = createHash('sha256').update(value.toLowerCase(), 'utf8').digest('hex');
+    digestCache.set(value, d);
+  }
+  return d;
+}
 
-const REVERSE_MODEL_MAP: Record<string, string> = Object.fromEntries(
-  Object.entries(INA_MODEL_MAP).map(([k, v]) => [v, k])
-);
+/**
+ * Resolve any persisted settings value to a canonical INA model id.
+ *
+ * Order matters: a value that is ALREADY an INA id is returned untouched, so
+ * the migration table never has to grow an identity row. An unrecognised value
+ * falls back to the capability's default and logs once — echoing it back is how
+ * an upstream id reaches a status bar or an API request.
+ */
+const warnedUnknown = new Set<string>();
+function toInaModelId(value: string | undefined | null, capability: ModelCapability): string {
+  const raw = (value ?? '').trim();
+  if (raw && isInaModelId(raw)) return raw;
+  if (raw) {
+    const migrated = LEGACY_MIGRATION.get(digest(raw));
+    if (migrated) return migrated;
+    if (!warnedUnknown.has(raw)) {
+      warnedUnknown.add(raw);
+      Logger.warn(
+        `[config] model setting is not a known INA model id; falling back to the ${capability} default. ` +
+          'If this was a custom model, the server must be configured to resolve it.'
+      );
+    }
+  }
+  return defaultModel(capability).id;
+}
 
 // ============ Type Definitions ============
 
@@ -45,7 +127,7 @@ export interface FullConfig {
 export const CONFIG_DEFAULTS: FullConfig = {
   general: { enabled: true, language: 'auto' },
   api: { endpoint: 'https://coding-api.inagpt.com', timeout: 60000, retryAttempts: 3 },
-  models: { chat: 'INA-7 Pro', customChat: '', completion: 'INA-7 Pro', customCompletion: '', embedding: 'INA Embed' },
+  models: { chat: 'ina-8-coding-pro', customChat: '', completion: 'ina-8-coding-pro', customCompletion: '', embedding: 'ina-embed' },
   chat: { temperature: 0.7, maxTokens: 4096, contextLines: 100, includeImports: true, includeRecentFiles: 3, systemPrompt: '' },
   completion: { enabled: true, delay: 300, maxTokens: 256, temperature: 0.2, disabledLanguages: ['markdown', 'plaintext', 'json', 'yaml'] },
   inlineEdit: { enabled: true, showDiff: true, autoApply: false, keepHistory: true, historySize: 20 },
@@ -188,31 +270,78 @@ class ConfigManagerClass {
     return { general: this.getGeneral(), api: this.getApi(), models: this.getModels(), chat: this.getChat(), completion: this.getCompletion(), inlineEdit: this.getInlineEdit(), indexing: this.getIndexing(), privacy: this.getPrivacy(), ui: this.getUI(), advanced: this.getAdvanced() };
   }
 
-  getChatModel(): string {
+  /**
+   * The configured model for a capability, as a canonical INA id.
+   *
+   * This is the ONLY way a model id should leave configuration. It migrates a
+   * legacy persisted value, and it can never return an upstream id — an
+   * unrecognised setting resolves to the capability's default instead of being
+   * passed through, which is what the old `INA_MODEL_MAP[x] || x` did.
+   */
+  getConfiguredModel(capability: ModelCapability): string {
     const m = this.getModels();
-    const selected = m.chat === 'custom' && m.customChat ? m.customChat : m.chat;
-    return this.resolveModelName(selected);
+    switch (capability) {
+      case 'coding':
+        return toInaModelId(m.completion === 'custom' && m.customCompletion ? m.customCompletion : m.completion, 'coding');
+      case 'embedding':
+        return toInaModelId(m.embedding, 'embedding');
+      case 'vision':
+        return toInaModelId(null, 'vision');
+      case 'general':
+      default:
+        return toInaModelId(m.chat === 'custom' && m.customChat ? m.customChat : m.chat, 'general');
+    }
+  }
+
+  /**
+   * Resolve ANY model value — a registry id, a legacy INA display name, or a
+   * legacy upstream id persisted by an older build — to a canonical INA id.
+   *
+   * Exposed because per-request overrides arrive from the webview and from
+   * stored conversation state, neither of which is configuration, and both of
+   * which can still carry a value written by a previous version.
+   */
+  resolveModelId(value: string | null | undefined, capability: ModelCapability = 'general'): string {
+    return toInaModelId(value, capability);
+  }
+
+  /** Persist a model choice. Refuses anything that is not a registry id. */
+  async setConfiguredModel(capability: ModelCapability, inaId: string): Promise<void> {
+    if (!isInaModelId(inaId)) {
+      throw new Error(`setConfiguredModel: "${inaId}" is not a known INA model id`);
+    }
+    const key = capability === 'embedding' ? 'models.embedding' : capability === 'coding' ? 'models.completion' : 'models.chat';
+    await this.set(key, inaId, vscode.ConfigurationTarget.Global);
+  }
+
+  /**
+   * Chat model as an INA id.
+   *
+   * Kept as a named method because five call sites use it; it is now a thin
+   * alias over getConfiguredModel so there is one resolution path, not two.
+   */
+  getChatModel(): string {
+    return this.getConfiguredModel('general');
   }
 
   getCompletionModel(): string {
-    const m = this.getModels();
-    const selected = m.completion === 'custom' && m.customCompletion ? m.customCompletion : m.completion;
-    return this.resolveModelName(selected);
+    return this.getConfiguredModel('coding');
   }
 
   getEmbeddingModel(): string {
-    const m = this.getModels();
-    return this.resolveModelName(m.embedding);
+    return this.getConfiguredModel('embedding');
   }
 
-  /** Translate INA brand name → real model name for API calls */
-  resolveModelName(inaName: string): string {
-    return INA_MODEL_MAP[inaName] || inaName;
-  }
-
-  /** Translate real model name → INA brand name for UI display */
-  getDisplayName(realName: string): string {
-    return REVERSE_MODEL_MAP[realName] || realName;
+  /**
+   * The label for any surface a human reads.
+   *
+   * Fails CLOSED: an id the registry does not know renders as a neutral label
+   * rather than being echoed. Echoing is how a legacy settings value containing
+   * an upstream id reaches a status bar, and a status bar is a screenshot away
+   * from being public.
+   */
+  getDisplayName(id: string): string {
+    return registryDisplayName(id);
   }
 
   getApiEndpoint(): string { return this.getApi().endpoint; }

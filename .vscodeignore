@@ -49,6 +49,10 @@ marketplace-assets/**
 # by construction.
 .brandmap.json
 BRANDING.md
+# Audit evidence. The BEFORE baselines necessarily enumerate every forbidden
+# term — that is what a baseline is — so packaging them ships the exact list
+# the artifact gate exists to keep out. Caught by that gate on 2026-09-11.
+.evidence/**
 IMPRESSUM.md
 AUDIT_REPORT_PHASE5.md
 tests/**

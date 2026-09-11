@@ -30,8 +30,10 @@ export { FIMPostProcessor } from './fim/FIMPostProcessor';
 export { FIMModelRouter } from './fim/FIMModelRouter';
 export { FIMStreamHandler } from './fim/FIMStreamHandler';
 export {
-  FIMModel,
-  getFIMTokensForModel,
+  FIM_PROFILE_DEFAULT,
+  getFIMTokens,
+  setFIMProfile,
+  resetFIMProfile,
   getStopSequences,
 } from './fim/FIMTypes';
 

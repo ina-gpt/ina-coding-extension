@@ -1,15 +1,24 @@
-// ============ Model Enum ============
-
-export enum FIMModel {
-  QWEN_CODER_32B = 'qwen2.5-coder:32b',
-  QWEN_CODER_14B = 'qwen2.5-coder:14b',
-  QWEN_CODER_7B = 'qwen2.5-coder:7b',
-  DEEPSEEK_CODER = 'deepseek-coder:33b',
-  CODELLAMA = 'codellama:34b',
-  STARCODER2 = 'starcoder2:15b',
-}
-
-// ============ FIM Token Formats ============
+// ============ Fill-in-the-middle token profiles ============
+//
+// WHAT CHANGED
+//   This file used to carry a `FIMModel` enum of upstream model ids, four token
+//   tables named after the model families that use them, and a `Record` keying
+//   thirteen upstream ids onto those tables. Twenty-five of the repository's
+//   raw-identifier findings lived here — the single largest concentration.
+//
+// WHY A PROFILE AND NOT A MODEL MAP
+//   FIM sentinel tokens are a property of the model the SERVER loads, not of
+//   anything the client can see. The client's only legitimate need is to know
+//   WHICH token shape to wrap a prompt in, and that is one bit of information
+//   the server can state directly. A client-side table mapping upstream ids to
+//   token shapes is a copy of the server's model roster, kept in a public
+//   repository, that goes stale silently the moment the server changes.
+//
+// WHAT WAS REMOVED, AND WHY THAT IS NOT A REGRESSION
+//   Three of the four profiles were unreachable. Every model in the INA
+//   registry uses the sentinel-pipe shape below, and the offline path builds
+//   its own prompt with those same sentinels hardcoded. No configuration
+//   reachable from this extension could select the other three.
 
 export interface FIMTokens {
   prefix: string;
@@ -21,7 +30,14 @@ export interface FIMTokens {
   file: string | null;
 }
 
-export const QWEN_FIM_TOKENS: FIMTokens = {
+/**
+ * The default sentinel shape, named for its SYNTAX rather than for a vendor.
+ *
+ * Every model in the INA registry accepts this form. It is the fallback when
+ * the server has not declared a profile, which is the common case: the profile
+ * only needs to travel when it differs.
+ */
+export const FIM_PROFILE_DEFAULT: FIMTokens = {
   prefix: '<|fim_prefix|>',
   suffix: '<|fim_suffix|>',
   middle: '<|fim_middle|>',
@@ -31,53 +47,57 @@ export const QWEN_FIM_TOKENS: FIMTokens = {
   file: '<|file_sep|>',
 };
 
-export const DEEPSEEK_FIM_TOKENS: FIMTokens = {
-  prefix: '<｜fim▁begin｜>',
-  suffix: '<｜fim▁hole｜>',
-  middle: '<｜fim▁end｜>',
-  endOfText: '<｜end▁of▁sentence｜>',
-  padding: null,
-  repository: null,
-  file: null,
-};
+/**
+ * The profile in force, replaceable by the server capability response.
+ *
+ * Held in a module-level cell rather than threaded through every call site
+ * because it is genuinely global: one server, one loaded model family, one
+ * token shape per session.
+ */
+let activeProfile: FIMTokens = FIM_PROFILE_DEFAULT;
 
-export const CODELLAMA_FIM_TOKENS: FIMTokens = {
-  prefix: '<PRE> ',
-  suffix: ' <SUF>',
-  middle: ' <MID>',
-  endOfText: ' ',
-  padding: null,
-  repository: null,
-  file: null,
-};
+/**
+ * Adopt a server-declared token profile.
+ *
+ * Every field is validated before it is adopted. A partially-populated profile
+ * is REJECTED rather than merged into the default: a prompt built from half of
+ * one sentinel scheme and half of another produces a completion that looks
+ * plausible and is silently wrong, which is far worse than using the default.
+ */
+export function setFIMProfile(profile: Partial<FIMTokens> | null | undefined): boolean {
+  if (!profile) return false;
+  const required: (keyof FIMTokens)[] = ['prefix', 'suffix', 'middle', 'endOfText'];
+  for (const k of required) {
+    const v = profile[k];
+    if (typeof v !== 'string' || v.length === 0) return false;
+  }
+  activeProfile = {
+    prefix: profile.prefix as string,
+    suffix: profile.suffix as string,
+    middle: profile.middle as string,
+    endOfText: profile.endOfText as string,
+    padding: typeof profile.padding === 'string' ? profile.padding : null,
+    repository: typeof profile.repository === 'string' ? profile.repository : null,
+    file: typeof profile.file === 'string' ? profile.file : null,
+  };
+  return true;
+}
 
-export const STARCODER_FIM_TOKENS: FIMTokens = {
-  prefix: '<fim_prefix>',
-  suffix: '<fim_suffix>',
-  middle: '<fim_middle>',
-  endOfText: '<|endoftext|>',
-  padding: '<fim_pad>',
-  repository: '<repo_name>',
-  file: '<file_sep>',
-};
+/** Restore the built-in profile. */
+export function resetFIMProfile(): void {
+  activeProfile = FIM_PROFILE_DEFAULT;
+}
 
-// ============ Model → Token Mapping ============
-
-export const MODEL_FIM_TOKENS: Record<string, FIMTokens> = {
-  'qwen2.5-coder:32b': QWEN_FIM_TOKENS,
-  'qwen2.5-coder:14b': QWEN_FIM_TOKENS,
-  'qwen2.5-coder:7b': QWEN_FIM_TOKENS,
-  'qwen3:14b': QWEN_FIM_TOKENS,
-  'qwen3:8b': QWEN_FIM_TOKENS,
-  'deepseek-coder:33b': DEEPSEEK_FIM_TOKENS,
-  'deepseek-coder:6.7b': DEEPSEEK_FIM_TOKENS,
-  'codellama:34b': CODELLAMA_FIM_TOKENS,
-  'codellama:13b': CODELLAMA_FIM_TOKENS,
-  'codellama:7b': CODELLAMA_FIM_TOKENS,
-  'starcoder2:15b': STARCODER_FIM_TOKENS,
-  'starcoder2:7b': STARCODER_FIM_TOKENS,
-  'starcoder2:3b': STARCODER_FIM_TOKENS,
-};
+/**
+ * The token shape to use.
+ *
+ * Takes no model argument by design. The previous signature,
+ * `getFIMTokensForModel(model)`, invited every caller to hold an upstream id in
+ * order to ask a question whose answer never depended on it.
+ */
+export function getFIMTokens(): FIMTokens {
+  return activeProfile;
+}
 
 // ============ FIM Request/Response ============
 
@@ -87,6 +107,7 @@ export interface FIMRequest {
   suffix: string;
   language: string;
   filePath: string;
+  /** An INA model id — see src/config/model-registry.ts. */
   model: string;
   maxTokens: number;
   temperature: number;
@@ -98,6 +119,7 @@ export interface FIMRequest {
 export interface FIMResponse {
   requestId: string;
   completion: string;
+  /** An INA model id. */
   model: string;
   tokens: number;
   latency: number;
@@ -158,27 +180,13 @@ export const LANGUAGE_STOP_SEQUENCES: Record<string, string[]> = {
 
 // ============ Defaults ============
 
-export const DEFAULT_FIM_MODEL = FIMModel.QWEN_CODER_32B;
 export const DEFAULT_MAX_TOKENS = 128;
 export const DEFAULT_TEMPERATURE = 0.2;
 export const DEFAULT_STOP_SEQUENCES = ['\n\n', '```'];
 
-export function getFIMTokensForModel(model: string): FIMTokens {
-  // Try exact match first
-  if (MODEL_FIM_TOKENS[model]) return MODEL_FIM_TOKENS[model];
-
-  // Try prefix match
-  for (const [key, tokens] of Object.entries(MODEL_FIM_TOKENS)) {
-    if (model.startsWith(key.split(':')[0])) return tokens;
-  }
-
-  // Default to the INA 8 Coding FIM token format
-  return QWEN_FIM_TOKENS;
-}
-
-export function getStopSequences(language: string, model: string): string[] {
+export function getStopSequences(language: string): string[] {
   const langStops = LANGUAGE_STOP_SEQUENCES[language] || LANGUAGE_STOP_SEQUENCES.default;
-  const tokens = getFIMTokensForModel(model);
+  const tokens = getFIMTokens();
 
   const modelStops = [tokens.endOfText];
   if (tokens.padding) modelStops.push(tokens.padding);

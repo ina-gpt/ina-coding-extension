@@ -4,7 +4,7 @@
  *
  * Each agent is a lightweight record describing a role + system prompt +
  * model hint. Actual model calls happen through ApiService, which routes
- * to the INA GPT backend (INA-7 Pro).
+ * to the INA GPT backend.
  */
 
 import {
@@ -15,16 +15,22 @@ import {
 } from './MultiAgentTypes';
 
 /**
- * Model hints. The backend translates these into the appropriate upstream
- * model — they are never shown to the end user.
+ * Which model each role asks for, as INA ids.
+ *
+ * These used to be upstream model ids with a comment promising they were
+ * "never shown to the end user". They were sent to the server verbatim, and the
+ * comment was the only thing standing between them and a log line.
+ *
+ * Reasoning roles take the general-purpose pro tier; roles that write code take
+ * the coding pro tier.
  */
 const MODEL_HINTS: Record<AgentRole, string> = {
-  [AgentRole.PLANNER]: 'qwen3:14b',
-  [AgentRole.CODER]: 'qwen2.5-coder:32b',
-  [AgentRole.REVIEWER]: 'qwen3:14b',
-  [AgentRole.TESTER]: 'qwen3:14b',
-  [AgentRole.REFACTORER]: 'qwen2.5-coder:32b',
-  [AgentRole.SECURITY_AUDITOR]: 'qwen3:14b',
+  [AgentRole.PLANNER]: 'ina-8-pro',
+  [AgentRole.CODER]: 'ina-8-coding-pro',
+  [AgentRole.REVIEWER]: 'ina-8-pro',
+  [AgentRole.TESTER]: 'ina-8-pro',
+  [AgentRole.REFACTORER]: 'ina-8-coding-pro',
+  [AgentRole.SECURITY_AUDITOR]: 'ina-8-pro',
 };
 
 /** Default token budget per role — overridden via factory config if desired */

@@ -1619,15 +1619,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       let fullContent = '';
 
       // Feature 5 — if _overrideModel is set, use it for this one request.
-      // The ConfigManager maps "INA-*" brand IDs to real model IDs; an
-      // override that is already a real model ID passes through unchanged.
-      const overrideIdMap: Record<string, string> = {
-        'ina-7-pro-code': 'INA-7 Pro',
-        'ina-7-pro-chat': 'INA-6.2 Pro',
-        'ina-7-lite': 'INA-7 Lite',
-      };
+      //
+      // The override comes from the webview's retry picker, which now posts an
+      // INA model id. The two-step translation that used to live here — a local
+      // map from picker id to INA display name, then ConfigManager's map from
+      // display name to an upstream id — is gone with the upstream map itself.
+      // resolveModelId still migrates a value written by an older build, so a
+      // conversation restored from previous state keeps working.
       const resolvedModel = this._overrideModel
-        ? ConfigManager.resolveModelName(overrideIdMap[this._overrideModel] ?? this._overrideModel)
+        ? ConfigManager.resolveModelId(this._overrideModel, 'general')
         : ConfigManager.getChatModel();
       for await (const chunk of this.apiService.chatStream(
         { messages, context: chatContext, options: { model: resolvedModel, temperature: ConfigManager.getChat().temperature, maxTokens: ConfigManager.getChat().maxTokens } },

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { FIMResponse, getFIMTokensForModel } from './FIMTypes';
+import { FIMResponse, getFIMTokens } from './FIMTypes';
 import { FIMPostProcessor } from './FIMPostProcessor';
 import { Logger } from '../../../utils/Logger';
 
@@ -87,7 +87,7 @@ export class FIMStreamHandler implements vscode.Disposable {
     state.tokenCount++;
 
     // Check for stop sequences in accumulated text
-    const tokens = getFIMTokensForModel(state.model);
+    const tokens = getFIMTokens();
     if (state.fullText.includes(tokens.endOfText)) {
       state.fullText = state.fullText.split(tokens.endOfText)[0];
       this.completeStream(requestId, 'end_of_text');

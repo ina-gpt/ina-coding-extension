@@ -13,6 +13,7 @@
 import { VerificationResult } from './VerifierTypes';
 import { ApiService } from '../../ApiService';
 import { Logger } from '../../../utils/Logger';
+import { defaultModel } from '../../../config/model-registry';
 
 // ============================================================
 
@@ -237,7 +238,7 @@ Output format — ONLY a JSON object, no prose:
         { role: 'user', content: userPrompt },
       ],
       options: {
-        model: 'qwen3:14b',
+        model: defaultModel('general').id,
         temperature: 0.3,
         maxTokens: 2000,
       },

@@ -3,7 +3,7 @@ import {
   PostProcessingResult,
   PostProcessingRule,
   FIMQualityMetrics,
-  getFIMTokensForModel,
+  getFIMTokens,
 } from './FIMTypes';
 
 export class FIMPostProcessor {
@@ -90,7 +90,7 @@ export class FIMPostProcessor {
   }
 
   private removeSpecialTokens(text: string, model: string): string {
-    const tokens = getFIMTokensForModel(model);
+    const tokens = getFIMTokens();
 
     // Remove all known FIM tokens
     let result = text;

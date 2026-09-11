@@ -18,9 +18,9 @@ export class CircuitBreakerRegistry {
 
   private constructor() {
     // Pre-register common breakers
-    this.getOrCreate('ollama-chat', { failureThreshold: 3, resetTimeoutMs: 30000 });
-    this.getOrCreate('ollama-completion', { failureThreshold: 5, resetTimeoutMs: 20000 });
-    this.getOrCreate('ollama-embedding', { failureThreshold: 5, resetTimeoutMs: 15000 });
+    this.getOrCreate('inference-chat', { failureThreshold: 3, resetTimeoutMs: 30000 });
+    this.getOrCreate('inference-completion', { failureThreshold: 5, resetTimeoutMs: 20000 });
+    this.getOrCreate('inference-embedding', { failureThreshold: 5, resetTimeoutMs: 15000 });
     this.getOrCreate('api-server', { failureThreshold: 5, resetTimeoutMs: 30000 });
     this.getOrCreate('vision', { failureThreshold: 2, resetTimeoutMs: 60000 });
     this.getOrCreate('database', { failureThreshold: 3, resetTimeoutMs: 15000 });

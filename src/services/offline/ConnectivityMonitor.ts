@@ -74,7 +74,7 @@ export class ConnectivityMonitor extends EventEmitter {
     // Check API server health
     let apiOnline = false;
     let apiLatency: number | null = null;
-    let ollamaOnline = false;
+    let inferenceOnline = false;
     let gpuOnline = false;
     let dbOnline = false;
     let apiError: string | null = null;
@@ -91,7 +91,13 @@ export class ConnectivityMonitor extends EventEmitter {
         apiOnline = true;
         try {
           const data = await response.json();
-          ollamaOnline = data.services?.ollama === true;
+          // The server reports the inference runtime under `inference`.
+          // An OLDER self-hosted server omits the key entirely; treating a
+          // missing key as `false` would show every pre-upgrade server a
+          // permanent red runtime light, so absence leaves the value alone.
+          if (typeof data.services?.inference === 'boolean') {
+            inferenceOnline = data.services.inference;
+          }
           gpuOnline = data.services?.embedding === true;
           dbOnline = data.services?.database === true;
         } catch { /* parse error, at least API is up */ }
@@ -102,7 +108,7 @@ export class ConnectivityMonitor extends EventEmitter {
 
     // Update target health
     this.updateTargetHealth(ConnectionTarget.API_SERVER, apiOnline, apiLatency, apiError);
-    this.updateTargetHealth(ConnectionTarget.OLLAMA, ollamaOnline, null, apiOnline ? null : 'API offline');
+    this.updateTargetHealth(ConnectionTarget.INFERENCE_RUNTIME, inferenceOnline, null, apiOnline ? null : 'API offline');
     this.updateTargetHealth(ConnectionTarget.GPU, gpuOnline, null, apiOnline ? null : 'API offline');
     this.updateTargetHealth(ConnectionTarget.DATABASE, dbOnline, null, apiOnline ? null : 'API offline');
 

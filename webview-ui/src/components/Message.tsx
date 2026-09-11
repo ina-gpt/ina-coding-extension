@@ -7,7 +7,22 @@ import { FeedbackWidget } from './errors/FeedbackWidget';
 import { useChatStore } from '@/store/chatStore';
 import { postMessage } from '@/utils/vscode';
 import type { ChatMessage } from '@/types';
+import { modelsByCapability } from '@shared/config/model-registry';
 import clsx from 'clsx';
+
+/**
+ * The models offered by the "retry with a different model" picker.
+ *
+ * Derived from the shared registry rather than written out here. The literal
+ * list this replaces held raw upstream model ids as the `id` field, and those
+ * ids were webpacked into the shipped .vsix — the tree-level brand scan saw
+ * them, but the list they fed also posted them straight through to the API,
+ * bypassing every translation layer the extension had.
+ */
+const RETRY_MODELS = [
+  ...modelsByCapability('coding'),
+  ...modelsByCapability('general'),
+];
 
 interface MessageProps {
   message: ChatMessage;
@@ -75,12 +90,9 @@ const MessageActionBar: React.FC<{ messageId: string; isUser: boolean; content: 
             </button>
             {showModelPicker && (
               <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] py-1 rounded-md shadow-lg border border-[var(--vscode-panel-border)] bg-[var(--vscode-dropdown-background)]" role="listbox" aria-label="Select model">
-                {[
-                  { id: 'qwen2.5-coder:32b', label: 'INA-7 Pro (Code)' },
-                  { id: 'qwen3:14b', label: 'INA-7 Pro (Chat)' },
-                ].map(m => (
+                {RETRY_MODELS.map(m => (
                   <button key={m.id} onClick={() => handleRetryWithModel(m.id)} className="w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--vscode-list-hoverBackground)] text-[var(--vscode-dropdown-foreground)]" role="option">
-                    {m.label}
+                    {m.displayName}
                   </button>
                 ))}
               </div>

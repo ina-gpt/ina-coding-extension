@@ -1,10 +1,11 @@
+import { FIMRequest, getStopSequences } from './FIMTypes';
 import {
-  FIMModel,
-  FIMTokens,
-  FIMRequest,
-  getFIMTokensForModel,
-  getStopSequences,
-} from './FIMTypes';
+  InaModel,
+  ModelTier,
+  defaultModel,
+  getModel,
+  modelsByCapability,
+} from '../../../config/model-registry';
 import { FIMPromptBuilder } from './FIMPromptBuilder';
 import { Logger } from '../../../utils/Logger';
 
@@ -18,71 +19,52 @@ export interface ModelCapabilities {
   latencyTier: 'fast' | 'medium' | 'slow';
 }
 
-const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
-  'qwen2.5-coder:1.5b': {
-    supportsFIM: true,
+/**
+ * Per-tier completion behaviour, keyed by TIER rather than by model.
+ *
+ * This replaces a table keyed by seven upstream model ids — four of which named
+ * families this product has never served. Tier is the property the routing
+ * decision actually turns on: "prefer something fast" and "prefer something
+ * strong" are the only two questions `selectModel` ever asks, and neither of
+ * them needs a model name to answer.
+ *
+ * Context length comes from the registry per model, not from here, so there is
+ * exactly one place a context window is stated.
+ */
+const TIER_BEHAVIOUR: { readonly [K in ModelTier]: Omit<ModelCapabilities, 'supportsFIM' | 'maxContextLength'> } = {
+  fast: {
     supportsMultiFile: false,
     supportsRepository: false,
-    maxContextLength: 8192,
     maxCompletionTokens: 512,
     optimalTemperature: 0.05,
     latencyTier: 'fast',
   },
-  'qwen2.5-coder:32b': {
-    supportsFIM: true,
-    supportsMultiFile: true,
-    supportsRepository: true,
-    maxContextLength: 32768,
-    maxCompletionTokens: 2048,
-    optimalTemperature: 0.2,
-    latencyTier: 'slow',
-  },
-  'qwen2.5-coder:14b': {
-    supportsFIM: true,
-    supportsMultiFile: true,
-    supportsRepository: true,
-    maxContextLength: 32768,
-    maxCompletionTokens: 2048,
-    optimalTemperature: 0.2,
-    latencyTier: 'medium',
-  },
-  'qwen2.5-coder:7b': {
-    supportsFIM: true,
+  standard: {
     supportsMultiFile: true,
     supportsRepository: false,
-    maxContextLength: 32768,
-    maxCompletionTokens: 1024,
-    optimalTemperature: 0.2,
-    latencyTier: 'fast',
-  },
-  'deepseek-coder:33b': {
-    supportsFIM: true,
-    supportsMultiFile: false,
-    supportsRepository: false,
-    maxContextLength: 16384,
-    maxCompletionTokens: 2048,
-    optimalTemperature: 0.1,
-    latencyTier: 'slow',
-  },
-  'codellama:34b': {
-    supportsFIM: true,
-    supportsMultiFile: false,
-    supportsRepository: false,
-    maxContextLength: 16384,
-    maxCompletionTokens: 1024,
-    optimalTemperature: 0.2,
-    latencyTier: 'slow',
-  },
-  'starcoder2:15b': {
-    supportsFIM: true,
-    supportsMultiFile: true,
-    supportsRepository: true,
-    maxContextLength: 16384,
     maxCompletionTokens: 1024,
     optimalTemperature: 0.2,
     latencyTier: 'medium',
+  },
+  pro: {
+    supportsMultiFile: true,
+    supportsRepository: true,
+    maxCompletionTokens: 2048,
+    optimalTemperature: 0.2,
+    latencyTier: 'slow',
   },
 };
+
+function capabilitiesOf(m: InaModel): ModelCapabilities {
+  return {
+    supportsFIM: m.supportsFim,
+    maxContextLength: m.contextWindow,
+    ...TIER_BEHAVIOUR[m.tier],
+  };
+}
+
+/** The coding models, in registry order — the routable set for completion. */
+const ROUTABLE: readonly InaModel[] = modelsByCapability('coding');
 
 const DEFAULT_CAPABILITIES: ModelCapabilities = {
   supportsFIM: true,
@@ -102,7 +84,7 @@ export class FIMModelRouter {
   private fallbackModels: string[] = [];
 
   constructor(model?: string) {
-    this.currentModel = model || process.env.COMPLETION_MODEL || FIMModel.QWEN_CODER_32B;
+    this.currentModel = model || defaultModel('coding').id;
     this.promptBuilder = FIMPromptBuilder.getInstance();
   }
 
@@ -114,17 +96,11 @@ export class FIMModelRouter {
   }
 
   getCapabilities(model?: string): ModelCapabilities {
-    const m = model || this.currentModel;
-
-    // Exact match
-    if (MODEL_CAPABILITIES[m]) return MODEL_CAPABILITIES[m];
-
-    // Prefix match
-    for (const [key, caps] of Object.entries(MODEL_CAPABILITIES)) {
-      if (m.startsWith(key.split(':')[0])) return caps;
-    }
-
-    return DEFAULT_CAPABILITIES;
+    // No prefix matching. The old version fell back to `m.startsWith(family)`,
+    // which quietly gave one model another model's limits whenever a new size
+    // of the same family appeared. An id is either in the registry or it is not.
+    const m = getModel(model || this.currentModel);
+    return m ? capabilitiesOf(m) : DEFAULT_CAPABILITIES;
   }
 
   selectModel(request: {
@@ -149,9 +125,9 @@ export class FIMModelRouter {
     const caps = this.getCapabilities(this.currentModel);
     if (request.contextSize > caps.maxContextLength * 0.9) {
       // Need a model with larger context
-      for (const [model, modelCaps] of Object.entries(MODEL_CAPABILITIES)) {
-        if (modelCaps.maxContextLength >= request.contextSize && this.isModelHealthy(model)) {
-          return model;
+      for (const m of ROUTABLE) {
+        if (m.contextWindow >= request.contextSize && this.isModelHealthy(m.id)) {
+          return m.id;
         }
       }
     }
@@ -180,7 +156,7 @@ export class FIMModelRouter {
       model,
       maxTokens: Math.min(params.maxTokens || 128, caps.maxCompletionTokens),
       temperature: params.temperature ?? caps.optimalTemperature,
-      stopSequences: getStopSequences(params.language, model),
+      stopSequences: getStopSequences(params.language),
     };
   }
 
@@ -232,13 +208,13 @@ export class FIMModelRouter {
   }
 
   getSupportedModels(): string[] {
-    return Object.keys(MODEL_CAPABILITIES);
+    return ROUTABLE.map((m) => m.id);
   }
 
   private findModelByTier(tier: 'fast' | 'medium' | 'slow'): string | null {
-    for (const [model, caps] of Object.entries(MODEL_CAPABILITIES)) {
-      if (caps.latencyTier === tier && this.isModelHealthy(model)) {
-        return model;
+    for (const m of ROUTABLE) {
+      if (TIER_BEHAVIOUR[m.tier].latencyTier === tier && this.isModelHealthy(m.id)) {
+        return m.id;
       }
     }
     return null;
@@ -247,18 +223,27 @@ export class FIMModelRouter {
   /**
    * Phase 27 — User-setting-aware completion model routing.
    *
-   * Reads inaCoding.completion.model setting:
-   *   'fast'     → use the low-latency INA 8 Coding tier
-   *   'standard' → use the high-quality INA 8 Coding tier
-   *   'auto'     → use fast if available and healthy, else standard
+   * Reads `inaCoding.completion.model`:
+   *   'fast'     → the fast coding tier
+   *   'standard' → the pro coding tier
+   *   'auto'     → fast when it is healthy and responding quickly, else pro
+   *
+   * `inaCoding.completion.fastModelName` is still honoured, but its value is
+   * now resolved through the registry: the setting used to default to a raw
+   * upstream id, which the packaged manifest published and which was sent to
+   * the server verbatim.
    */
   getCompletionModel(): string {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const vscode = require('vscode');
       const config = vscode.workspace.getConfiguration('inaCoding.completion');
       const mode: string = config.get('model', 'auto');
-      const fastModel: string = config.get('fastModelName', 'qwen2.5-coder:1.5b');
-      const standardModel = 'qwen2.5-coder:32b';
+
+      const fastDefault = ROUTABLE.find((m) => m.tier === 'fast') ?? defaultModel('coding');
+      const configured: string = config.get('fastModelName', fastDefault.id);
+      const fastModel = getModel(configured) ? configured : fastDefault.id;
+      const standardModel = defaultModel('coding').id;
 
       switch (mode) {
         case 'fast':
@@ -267,18 +252,14 @@ export class FIMModelRouter {
           return standardModel;
         case 'auto':
         default:
-          // Use fast model if it's known to be healthy
           if (this.isModelHealthy(fastModel)) {
             const health = this.modelHealth.get(fastModel);
             if (health && health.latency > 0 && health.latency < 2000) {
               return fastModel;
             }
           }
-          // Check if fast model is in capabilities (i.e. we know about it)
-          if (MODEL_CAPABILITIES[fastModel]) {
-            return fastModel;
-          }
-          return standardModel;
+          // Only route to the fast model if the registry actually knows it.
+          return getModel(fastModel) ? fastModel : standardModel;
       }
     } catch {
       // vscode not available (test env)

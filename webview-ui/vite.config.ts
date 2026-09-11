@@ -19,6 +19,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Must mirror the @shared path in tsconfig.json — see the note there.
+      '@shared': path.resolve(__dirname, '../src'),
     },
   },
   define: {

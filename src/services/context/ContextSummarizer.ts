@@ -9,6 +9,7 @@
 import * as vscode from 'vscode';
 import { Logger } from '../../utils/Logger';
 import { ConfigManager } from '../../utils/ConfigManager';
+import { defaultModel } from '../../config/model-registry';
 
 export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';
@@ -48,7 +49,7 @@ export class ContextSummarizer {
     if (middleMessages.length <= 1) return messages;
 
     const historyText = middleMessages
-      .map((m) => `${m.role === 'user' ? 'User' : 'INA-7 Pro'}: ${m.content}`)
+      .map((m) => `${m.role === 'user' ? 'User' : 'INA'}: ${m.content}`)
       .join('\n\n');
 
     const summarizePrompt =
@@ -59,7 +60,7 @@ export class ContextSummarizer {
 
     try {
       const model = vscode.workspace.getConfiguration('inaCoding.context')
-        .get<string>('summarizeModel', 'qwen3:14b');
+        .get<string>('summarizeModel', defaultModel('general').id);
 
       const resp = await fetch(`${apiEndpoint}/api/chat`, {
         method: 'POST',

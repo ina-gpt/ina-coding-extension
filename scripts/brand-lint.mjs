@@ -232,6 +232,18 @@ const BIN = new Set(MAP.binary_ext || []);
 const ID_ROOT = /(ollama|qwen|whisper|piper|nomic|deepseek|codellama|starcoder|mistral|gemma|anthropic|openai)/i;
 const DOC_EXT = new Set(['.md', '.mdx', '.txt', '.rst']);
 
+// Exemptions that hold for a SOURCE scan and must NOT hold for an ARTIFACT
+// scan. `dist/` and `out/` are generated output in a repository — and the whole
+// product inside an unpacked .vsix. Applying the repo rule to the artifact made
+// the artifact gate skip extension/dist/extension.js (1.9 MB) and the packaged
+// webview bundle, i.e. everything it exists to inspect, and report clean on the
+// 11 files that were left. Measured 2026-09-11.
+const BUILD_OUTPUT = (MAP.build_output_paths || []).map((p) => (p.endsWith('/') ? p : `${p}/`));
+function isBuildOutputExemption(p) {
+  const norm = p.endsWith('/') ? p : `${p}/`;
+  return BUILD_OUTPUT.includes(norm);
+}
+
 function isExempt(rel) {
   // Matches at the root AND at any path segment boundary. A packaged .vsix
   // relocates everything under `extension/`, so an exact-path-only rule meant
@@ -239,6 +251,8 @@ function isExempt(rel) {
   // — the artifact gate would have failed a licence file for containing
   // precisely the notice the licence requires. Caught by its negative proof.
   return (MAP.exempt_paths || []).some((p) => {
+    // In artifact mode the build output is the thing under test.
+    if (MODE_DIR && isBuildOutputExemption(p)) return false;
     if (p.endsWith('/')) {
       const d = p.slice(0, -1);
       return rel === d || rel.startsWith(p) || rel.includes(`/${p}`) || rel.endsWith(`/${d}`);

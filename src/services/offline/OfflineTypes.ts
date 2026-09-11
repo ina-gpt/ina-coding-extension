@@ -15,7 +15,7 @@ export enum ConnectionState {
 
 export enum ConnectionTarget {
   API_SERVER = 'api',
-  OLLAMA = 'ollama',
+  INFERENCE_RUNTIME = 'inference-runtime',
   GPU = 'gpu',
   DATABASE = 'db',
   INTERNET = 'internet',

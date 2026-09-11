@@ -4,6 +4,8 @@
  * Used for context window management and budget allocation.
  */
 
+import { contextWindowFor, defaultModel } from '../config/model-registry';
+
 // ============ Types ============
 
 export interface TokenCount {
@@ -37,21 +39,15 @@ const CHARS_PER_TOKEN = {
   markdown: 4.2,
 };
 
-export const MODEL_LIMITS: Record<string, number> = {
-  // Real model names (internal)
-  'qwen2.5-coder:32b': 32768,
-  'qwen3:14b': 32768,
-  'qwen3:8b': 32768,
-  'qwen2.5-coder:14b': 32768,
-  'qwen2.5-coder:7b': 32768,
-  // INA brand names (user-facing)
-  'INA-7 Pro': 32768,
-  'INA-7': 32768,
-  'INA-7 Lite': 32768,
-  'INA-6.2 Pro': 32768,
-  'INA-6.2': 32768,
-  default: 32768,
-};
+/**
+ * Context windows come from the model registry.
+ *
+ * This used to be a second table keyed by upstream model id, with the INA
+ * display names bolted on beside them — two naming systems in one Record, both
+ * of which had to be maintained by hand whenever a model changed. An id in
+ * neither half silently got `default`, so a typo in a settings value was
+ * indistinguishable from a supported model.
+ */
 
 // ============ Token Counter Class ============
 
@@ -59,9 +55,9 @@ export class TokenCounter {
   private model: string;
   private contextLimit: number;
 
-  constructor(model: string = 'INA-7 Pro') {
+  constructor(model: string = defaultModel('general').id) {
     this.model = model;
-    this.contextLimit = MODEL_LIMITS[model] || MODEL_LIMITS.default;
+    this.contextLimit = contextWindowFor(model);
   }
 
   // ============ Basic Counting ============
@@ -261,7 +257,7 @@ export class TokenCounter {
 
   setModel(model: string): void {
     this.model = model;
-    this.contextLimit = MODEL_LIMITS[model] || MODEL_LIMITS.default;
+    this.contextLimit = contextWindowFor(model);
   }
 
   fitsWithin(content: string, maxTokens: number): boolean {

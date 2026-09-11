@@ -67,7 +67,13 @@ export class ErrorClassifier {
     // Server
     if (statusCode && statusCode >= 500) return ErrorCategory.SERVER;
     // Model
-    if (/model not found|model loading|out of memory|cuda|vram|oom|no model|ollama/i.test(msg)) return ErrorCategory.MODEL;
+    // The runtime's own product name was one of the alternatives here. It is
+    // removed rather than exempted: if a raw upstream error string is reaching
+    // the client at all, the SERVER has failed to sanitize it, and matching on
+    // it here would make the extension depend on that leak continuing. The
+    // remaining alternatives describe the CONDITION, which is what a classifier
+    // should key on, and they cover every message the API actually returns.
+    if (/model not found|model loading|out of memory|cuda|vram|oom|no model|inference runtime/i.test(msg)) return ErrorCategory.MODEL;
     // GPU
     if (/\bgpu\b|cuda error|no gpu|vram exhausted/i.test(msg)) return ErrorCategory.GPU;
     // Database

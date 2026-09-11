@@ -10,6 +10,7 @@ import { CodeSecurityGate } from './codesec/CodeSecurityGate';
 import { EphemeralPolicyEnforcer } from './codesec/EphemeralPolicyEnforcer';
 import { CodeTransmissionMonitor } from './codesec/CodeTransmissionMonitor';
 import { ApiKeyStore } from './access/ApiKeyStore';
+import { MODEL_IDS, isInaModelId } from '../config/model-registry';
 
 // ============ Types ============
 
@@ -106,6 +107,39 @@ class CircuitBreaker {
 
 // ============ API Service ============
 
+/**
+ * Raised when a request is about to send a model id the registry does not know.
+ */
+export class InvalidModelIdError extends Error {
+  readonly requestedId: string;
+  constructor(requestedId: string) {
+    super(
+      `Refusing to send model id "${requestedId}" — it is not in the INA model registry. ` +
+        `Known ids: ${MODEL_IDS.join(', ')}.`
+    );
+    this.name = 'InvalidModelIdError';
+    this.requestedId = requestedId;
+  }
+}
+
+/**
+ * The last line of defence before a model id leaves this process.
+ *
+ * A HARD GATE, not a warning. The whole class of defect this repository just
+ * spent a rewrite removing was an upstream model id travelling from a literal
+ * somewhere in the codebase, through a translation layer that passed unknown
+ * values straight through (`MAP[x] || x`), onto the wire. A warning would have
+ * let every one of those ship exactly as they did.
+ *
+ * `undefined` is allowed through: it means "no override", and the server
+ * applies its configured default.
+ */
+function sendableModel(override: string | undefined, fallback: string): string {
+  const chosen = override ?? fallback;
+  if (!isInaModelId(chosen)) throw new InvalidModelIdError(chosen);
+  return chosen;
+}
+
 export class ApiService {
   private context: vscode.ExtensionContext;
   private authService: AuthService | null = null;
@@ -122,6 +156,17 @@ export class ApiService {
 
   async initialize(): Promise<void> {
     Logger.info('API Service initialized', { baseUrl: ConfigManager.getApiEndpoint() });
+  }
+
+  /**
+   * Auth headers for a caller that must talk to the API outside this class.
+   *
+   * Exposed for the offline-manifest fetch, which needs the same OAuth →
+   * API-key fallback chain. Re-implementing that chain in a second place is
+   * how MemoryClient ended up sending only a Content-Type and 401-storming.
+   */
+  async authHeaders(): Promise<Record<string, string>> {
+    return this.getHeaders();
   }
 
   private async getHeaders(): Promise<Record<string, string>> {
@@ -145,6 +190,7 @@ export class ApiService {
     return headers;
   }
 
+
   // ============ Chat Streaming (SSE) ============
 
   async *chatStream(
@@ -159,7 +205,7 @@ export class ApiService {
       projectId: undefined,
       context: request.context,
       options: {
-        model: request.options?.model || ConfigManager.getChatModel(),
+        model: sendableModel(request.options?.model, ConfigManager.getChatModel()),
         temperature: request.options?.temperature ?? ConfigManager.getChat().temperature,
         maxTokens: request.options?.maxTokens ?? ConfigManager.getChat().maxTokens,
         stream: true,
@@ -238,7 +284,7 @@ export class ApiService {
             body: JSON.stringify({
               messages: request.messages,
               context: request.context,
-              options: { ...request.options, stream: false, model: request.options?.model || ConfigManager.getChatModel() },
+              options: { ...request.options, stream: false, model: sendableModel(request.options?.model, ConfigManager.getChatModel()) },
             }),
           });
           if (!response.ok) { throw new Error(`HTTP ${response.status}`); }
@@ -272,7 +318,7 @@ export class ApiService {
               signal: abortCtrl.signal,
               body: JSON.stringify({
                 ...request,
-                options: { ...request.options, model: request.options?.model || ConfigManager.getCompletionModel() },
+                options: { ...request.options, model: sendableModel(request.options?.model, ConfigManager.getCompletionModel()) },
               }),
             });
             if (!response.ok) { throw new Error(`HTTP ${response.status}`); }

@@ -6860,8 +6860,8 @@
         },
         "inaCoding.completion.fastModelName": {
           "type": "string",
-          "default": "qwen2.5-coder:1.5b",
-          "description": "Modellname für schnelle Vervollständigung (wird über die INA Inference Runtime geladen)"
+          "default": "ina-8-coding-fast",
+          "description": "Modell-ID für schnelle Vervollständigung. Gültige Werte sind INA-Modell-IDs (z. B. ina-8-coding-fast); der Server löst sie auf."
         },
         "inaCoding.context.suggestedFiles": {
           "type": "boolean",
@@ -6935,8 +6935,8 @@
         },
         "inaCoding.context.summarizeModel": {
           "type": "string",
-          "default": "qwen3:14b",
-          "description": "Modell für Konversations-Zusammenfassung (leichtes Modell empfohlen)"
+          "default": "ina-8-pro",
+          "description": "Modell-ID für Konversations-Zusammenfassung. Gültige Werte sind INA-Modell-IDs (z. B. ina-8-pro)."
         }
       }
     },

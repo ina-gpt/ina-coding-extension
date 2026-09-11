@@ -130,7 +130,6 @@
     "gradle/wrapper/",
     "android/gradlew",
     "android/gradlew.bat",
-    "src/config/model-registry.ts",
     "scripts/vsix-brand-scan.mjs",
     "scripts/surface-lint.mjs",
     "tests/telemetry-default.test.cjs",
@@ -201,12 +200,19 @@
         "src/services/inagpt.service.ts"
       ],
       "line_pattern": "@anthropic-ai/|@openai/|\\bfrom\\s+.@|:\\s*Anthropic\\b|new\\s+Anthropic\\b|\\bOpenAI\\b\\s*\\(|\"openai\":|\"@?[a-z-]*(openai|anthropic)"
+    },
+    {
+      "reason": "SELF-HOSTED PROVIDER INTEROPERABILITY. ModelProvider is the union an enterprise operator picks from when pointing their own deployment at their own inference endpoint. A setting that lets an operator select a provider cannot omit that provider's name and remain usable, and the value is persisted in enterprise configuration, so renaming the members would break stored deployments for a cosmetic gain. Market context per BRANDING.md 2 — a list of what INA can CONNECT TO, never a statement of what INA runs on.",
+      "files": [
+        "src/services/enterprise/EnterpriseTypes.ts"
+      ],
+      "line_pattern": "export type ModelProvider\\s*="
     }
   ],
   "exempt_paths_note": "Files exempt BY DESIGN: LICENSE/NOTICE/THIRD_PARTY_NOTICES (Apache-2.0 s.4 attribution); BRANDING.md and .brandmap.json (they ARE the rule and must list the forbidden terms); the linters and their negative proofs (a gate proof necessarily contains the terms it detects); src/config/model-registry.ts (BRANDING.md s.5 designates it the single sanctioned home for upstream ids).",
-  "vsix_id_baseline": 2,
-  "vsix_id_baseline_note": "MEASURED 2026-09-09 against ina-coding-1.1.0.vsix: two model-id setting DEFAULTS in the packaged manifest. Public surface in a shipped artifact is ALWAYS hard zero, no baseline. Shrink-only.",
-  "id_baseline": 101,
+  "vsix_id_baseline": 0,
+  "vsix_id_baseline_note": "HARD ZERO, measured 2026-09-11 against ina-coding-1.1.0.vsix with 665 of 673 files scanned. The previous value of 2 was measured while the artifact scan was skipping extension/dist/extension.js and the packaged webview bundle, because the repository's dist/ and out/ exemptions were being applied to the artifact. It therefore measured the manifest and a few docs, not the product. The two package.json setting defaults it did see are now INA model ids. Shrink-only.",
+  "id_baseline": 0,
   "public_surface_baseline": 0,
   "surface_exemptions": [
     {
@@ -248,5 +254,14 @@
         "Google"
       ]
     }
-  ]
+  ],
+  "id_baseline_note": "HARD ZERO as of 2026-09-11. Measured down from 101 by moving upstream resolution server-side: the extension sends an INA id and the private API repository resolves it. There is no longer any sanctioned home for an upstream identifier in this repository, so the src/config/model-registry.ts file exemption was removed with the same commit rather than left standing as a hole.",
+  "build_output_paths": [
+    "dist/",
+    "out/",
+    "build/",
+    ".next/",
+    "artifact/"
+  ],
+  "build_output_note": "Paths whose exemption is SOURCE-SCAN ONLY. In a repository scan these hold generated output that nobody reviews, so linting them is noise. In an ARTIFACT scan (--dir over an unpacked .vsix) the generated bundle IS the product, and exempting it means the artifact gate inspects the manifest and skips the 1.9 MB of compiled extension it exists to check. Measured 2026-09-11: the gate reported 11 of 673 files scanned and called the artifact clean. brand-lint therefore drops these exemptions when --dir is in force."
 }

@@ -10,6 +10,7 @@ import { DiffApplicator } from './DiffApplicator';
 import { CodeSecurityGate } from '../codesec/CodeSecurityGate';
 import { Logger } from '../../utils/Logger';
 import { ConfigManager } from '../../utils/ConfigManager';
+import { defaultModel } from '../../config/model-registry';
 
 export class ApplyService {
   private static instance: ApplyService;
@@ -133,7 +134,9 @@ export class ApplyService {
   // Feature 1: Smart Apply Model — route apply through faster model
   getApplyModel(): string {
     const mode = ConfigManager.get<string>('apply.model', 'fast');
-    return mode === 'fast' ? 'qwen3:14b' : 'qwen2.5-coder:32b';
+    // 'fast' routes to the general-purpose tier, which answers an apply
+    // faster than the coding tier; anything else gets the coding model.
+    return mode === 'fast' ? defaultModel('general').id : defaultModel('coding').id;
   }
 
   // Feature 2: Calculate apply confidence for instant apply
