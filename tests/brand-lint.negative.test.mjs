@@ -388,3 +388,94 @@ test('(provenance) UNKNOWN visibility REFUSES rather than assuming private', () 
     assert.match(out, /refusing to guess|could not read/i);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+// ---------------------------------------------------------------------------
+// ARTIFACT MODE (--dir). The gate that scans an unpacked .vsix.
+//
+// The scar these three pin, measured 2026-09-11: .brandmap.json exempts `dist/`
+// and `out/` because in a SOURCE scan they hold generated output nobody
+// reviews. Those same exemptions were applied to the ARTIFACT scan, where the
+// generated bundle IS the product — so the gate skipped
+// extension/dist/extension.js (1.9 MB) and the packaged webview bundle, scanned
+// 11 of 673 files, and reported the artifact clean. A gate that inspects
+// everything except the thing under test is the decorative-gate class, and the
+// fix for it needs its own proof or it is just a second unverified claim.
+// ---------------------------------------------------------------------------
+
+function runLintDir(dir, rootForMap) {
+  const r = spawnSync(
+    process.execPath,
+    [LINTER, '--json', `--dir=${dir}`, `--root=${rootForMap}`],
+    { encoding: 'utf8' }
+  );
+  let report = null;
+  try { report = JSON.parse(r.stdout); } catch { /* exit 2 paths print no JSON */ }
+  return { code: r.status, stdout: r.stdout, report };
+}
+
+test('(artifact) a deny term in the packaged BUNDLE under dist/ FAILS', () => {
+  // The fixture supplies the rule set; `artifact` is a plain directory, the
+  // shape an unpacked .vsix actually has.
+  const dir = fixture({ 'README.md': '# Clean\n' });
+  const art = mkdtempSync(join(tmpdir(), 'brand-lint-artifact-'));
+  try {
+    mkdirSync(join(art, 'extension', 'dist'), { recursive: true });
+    writeFileSync(
+      join(art, 'extension', 'dist', 'extension.js'),
+      `var m="${QWEN.toLowerCase()}2.5-coder:32b";\n`
+    );
+    const { code, report } = runLintDir(art, dir);
+    assert.equal(code, 1, 'a model id inside the SHIPPED bundle must fail the artifact gate');
+    assert.ok(report, 'the artifact gate must emit a report');
+    assert.ok(
+      report.findings.some((f) => f.file.includes('dist/extension.js')),
+      'the finding must name the bundle, not some other file'
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(art, { recursive: true, force: true });
+  }
+});
+
+test('(artifact) the SAME bundle path is still exempt in a SOURCE scan', () => {
+  // The build-output exemption is not deleted — it is scoped to the mode where
+  // it is correct. If this goes red, the fix over-corrected and every repo with
+  // a committed dist/ starts failing its own tree scan.
+  const dir = fixture({
+    'README.md': '# Clean\n',
+    'dist/extension.js': `var m="${QWEN.toLowerCase()}2.5-coder:32b";\n`,
+  });
+  try {
+    const { code } = runLint(dir);
+    assert.equal(code, 0, 'generated output in a SOURCE tree must stay exempt');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('(artifact) a clean artifact PASSES — the gate is not always-red', () => {
+  const dir = fixture({ 'README.md': '# Clean\n' });
+  const art = mkdtempSync(join(tmpdir(), 'brand-lint-artifact-ok-'));
+  try {
+    mkdirSync(join(art, 'extension', 'dist'), { recursive: true });
+    writeFileSync(join(art, 'extension', 'dist', 'extension.js'), 'var m="ina-8-coding-pro";\n');
+    writeFileSync(join(art, 'extension', 'package.json'), '{"name":"ina-coding"}\n');
+    const { code } = runLintDir(art, dir);
+    assert.equal(code, 0, 'a clean artifact must pass, or the gate carries no signal');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(art, { recursive: true, force: true });
+  }
+});
+
+test('(artifact) an EMPTY artifact EXITS 2, never 0', () => {
+  // "We unpacked nothing" and "the artifact is clean" must not share an exit
+  // code — the same rule the tree scan already carries.
+  const dir = fixture({ 'README.md': '# Clean\n' });
+  const art = mkdtempSync(join(tmpdir(), 'brand-lint-artifact-empty-'));
+  try {
+    const { code } = runLintDir(art, dir);
+    assert.equal(code, 2, 'an artifact scan that read nothing must not report clean');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(art, { recursive: true, force: true });
+  }
+});
