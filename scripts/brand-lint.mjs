@@ -75,10 +75,12 @@ if (MODE_MLIC) {
   // read only the KEYS that name models, and never echo a value that did not
   // match the model shape.
   // The tag may be a size (`:14b`, `:30b-a3b`) OR a name (`:latest`). Requiring
-  // a leading digit silently skipped `devstral:latest` and
-  // `nomic-embed-text:latest` — both served — so the guard reported 5 of 7 and
+  // a leading digit silently skipped two SERVED models whose tag is `:latest` —
+  // a coding model and an embedding model — so the guard reported 5 of 7 and
   // called it clean. A guard that quietly narrows its own input set is the same
-  // defect as one that cannot fail.
+  // defect as one that cannot fail. (Their names are omitted deliberately: this
+  // file is exempt from the scan by design, which makes it the one place where
+  // a forbidden term could sit in a public repository unremarked.)
   const MODEL_ID = /^[a-z][a-z0-9.]*(?:-[a-z0-9.]+)*:[a-z0-9][a-z0-9.-]*$/;
   const NOT_A_MODEL = /^(localhost|stun|turn|https?|redis|rediss|postgres|postgresql|mysql|amqp|ws|wss|file|smtp|imap|s3|gs|mongodb)$/;
   const looksLikeModel = (v) => {

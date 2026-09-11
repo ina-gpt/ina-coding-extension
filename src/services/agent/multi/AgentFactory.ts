@@ -7,6 +7,7 @@
  * to the INA GPT backend.
  */
 
+import { InaModelId } from '../../../config/model-registry';
 import {
   AgentInstance,
   AgentRole,
@@ -17,20 +18,21 @@ import {
 /**
  * Which model each role asks for, as INA ids.
  *
- * These used to be upstream model ids with a comment promising they were
- * "never shown to the end user". They were sent to the server verbatim, and the
- * comment was the only thing standing between them and a log line.
+ * Typed as InaModelId, not string. When the ladder was renamed from ina-8-* to
+ * ina-7-4-*, tsc passed with every id here stale, because `Record<AgentRole,
+ * string>` accepts any text at all. The union type is what makes a future
+ * rename a compile error instead of six silent 422s at runtime.
  *
  * Reasoning roles take the general-purpose pro tier; roles that write code take
  * the coding pro tier.
  */
-const MODEL_HINTS: Record<AgentRole, string> = {
-  [AgentRole.PLANNER]: 'ina-8-pro',
-  [AgentRole.CODER]: 'ina-8-coding-pro',
-  [AgentRole.REVIEWER]: 'ina-8-pro',
-  [AgentRole.TESTER]: 'ina-8-pro',
-  [AgentRole.REFACTORER]: 'ina-8-coding-pro',
-  [AgentRole.SECURITY_AUDITOR]: 'ina-8-pro',
+const MODEL_HINTS: Record<AgentRole, InaModelId> = {
+  [AgentRole.PLANNER]: 'ina-7-4-pro',
+  [AgentRole.CODER]: 'ina-7-4-coding-pro',
+  [AgentRole.REVIEWER]: 'ina-7-4-pro',
+  [AgentRole.TESTER]: 'ina-7-4-pro',
+  [AgentRole.REFACTORER]: 'ina-7-4-coding-pro',
+  [AgentRole.SECURITY_AUDITOR]: 'ina-7-4-pro',
 };
 
 /** Default token budget per role — overridden via factory config if desired */

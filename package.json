@@ -6860,8 +6860,8 @@
         },
         "inaCoding.completion.fastModelName": {
           "type": "string",
-          "default": "ina-8-coding-fast",
-          "description": "Modell-ID für schnelle Vervollständigung. Gültige Werte sind INA-Modell-IDs (z. B. ina-8-coding-fast); der Server löst sie auf."
+          "default": "ina-7-4-coding-fast",
+          "description": "Modell-ID für schnelle Vervollständigung. Gültige Werte sind INA-Modell-IDs (z. B. ina-7-4-coding-fast); der Server löst sie auf."
         },
         "inaCoding.context.suggestedFiles": {
           "type": "boolean",
@@ -6935,8 +6935,8 @@
         },
         "inaCoding.context.summarizeModel": {
           "type": "string",
-          "default": "ina-8-pro",
-          "description": "Modell-ID für Konversations-Zusammenfassung. Gültige Werte sind INA-Modell-IDs (z. B. ina-8-pro)."
+          "default": "ina-7-4-pro",
+          "description": "Modell-ID für Konversations-Zusammenfassung. Gültige Werte sind INA-Modell-IDs (z. B. ina-7-4-pro)."
         }
       }
     },
@@ -7059,12 +7059,13 @@
     "brand-lint": "node scripts/brand-lint.mjs",
     "test:brand": "node --test tests/brand-lint.negative.test.mjs",
     "test:claims": "node --require ./tests/vscode-stub.cjs --test tests/claims.test.cjs",
-    "test:unit": "npm run test:brand && npm run test:claims && npm run test:telemetry && npm run test:selfhosted && npm run test:secret && npm run test:claim-gate && npm run claim-audit",
+    "test:unit": "npm run test:brand && npm run test:claims && npm run test:telemetry && npm run test:selfhosted && npm run test:secret && npm run test:claim-gate && npm run claim-audit && npm run test:ladder",
     "test:telemetry": "node --require ./tests/vscode-stub.cjs --test tests/telemetry-default.test.cjs",
     "claim-audit": "node scripts/claim-audit.mjs",
     "test:claim-gate": "node scripts/claim-audit.mjs --selftest",
     "test:selfhosted": "node --require ./tests/vscode-stub.cjs --test tests/self-hosted.test.cjs",
-    "test:secret": "node --test tests/secret-lint.negative.test.mjs"
+    "test:secret": "node --test tests/secret-lint.negative.test.mjs",
+    "test:ladder": "node --require ./tests/vscode-stub.cjs --test tests/ladder.test.cjs"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",

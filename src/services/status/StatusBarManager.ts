@@ -89,14 +89,19 @@ export class StatusBarManager {
     // Model
     const model = this.items.get('ina-model');
     if (model && cfg.get('showModelStatus', true)) {
-      const shortName = ConfigManager.getDisplayName(s.model.modelName || '') || s.model.modelName?.split(':')[0] || '?';
+      // getDisplayName ALONE. The `|| s.model.modelName?.split(':')[0]`
+      // fallback that used to follow it was the leak: when the registry did not
+      // recognise the id, it rendered the id's own family prefix — which for a
+      // legacy setting is an upstream vendor name, on screen, one screenshot
+      // from public. getDisplayName already fails closed to a neutral label.
+      const shortName = ConfigManager.getDisplayName(s.model.modelName || '');
       switch (s.model.state) {
         case 'ready': model.text = `$(hubot) ${shortName}`; model.color = undefined; break;
         case 'loading': model.text = '$(loading~spin) Model'; model.color = new vscode.ThemeColor('warningForeground'); break;
         case 'unavailable': model.text = '$(warning) Model'; model.color = new vscode.ThemeColor('errorForeground'); break;
         default: model.text = '$(hubot) ?'; model.color = undefined;
       }
-      const parts = [`Model: ${s.model.modelName || 'unknown'}`];
+      const parts = [`Model: ${s.model.modelName ? ConfigManager.getDisplayName(s.model.modelName) : 'unknown'}`];
       if (s.model.vramUsedMB && s.model.vramTotalMB) parts.push(`VRAM: ${s.model.vramUsedMB}/${s.model.vramTotalMB} GB`);
       if (s.model.lastResponseMs) parts.push(`Last response: ${(s.model.lastResponseMs / 1000).toFixed(1)}s`);
       parts.push(`Active: ${s.model.requestsActive}, Queue: ${s.model.queueDepth}`);

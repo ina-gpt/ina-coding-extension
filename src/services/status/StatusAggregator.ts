@@ -71,7 +71,10 @@ export class StatusAggregator extends EventEmitter {
 
     // Model
     try {
-      s.model.modelName = ConfigManager.get<string>('models.chat', 'INA-7 Pro');
+      // The MIGRATED id, not the raw setting. Reading the raw value put a
+      // legacy name — and, for an old enough install, a raw upstream id —
+      // straight onto the status bar and into the health dashboard.
+      s.model.modelName = ConfigManager.getConfiguredModel('general');
       const rs = this.services.requestScheduler;
       if (rs) {
         const metrics = rs.getMetrics?.();
@@ -272,7 +275,10 @@ export class StatusAggregator extends EventEmitter {
     const s = this.currentStatus;
     const parts: string[] = [];
     parts.push(s.connection.state === 'online' ? 'Online' : s.connection.state);
-    if (s.model.modelName) parts.push(s.model.modelName.split(':')[0]);
+    // getDisplayName, never a split() of the raw id: splitting on ':' was
+    // designed to shorten an upstream tag, which is the exact string that must
+    // never be rendered.
+    if (s.model.modelName) parts.push(ConfigManager.getDisplayName(s.model.modelName));
     if (s.memory.memoriesCount > 0) parts.push(`${s.memory.memoriesCount} memories`);
     if (s.diagnostics.errors > 0) parts.push(`${s.diagnostics.errors} errors`);
     parts.push(this.formatTokenCount(s.tokens.sessionTotalTokens) + ' tokens');

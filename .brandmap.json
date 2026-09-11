@@ -16,6 +16,7 @@
     "vLLM",
     "llama.cpp",
     "llama-cpp",
+    "Devstral",
     "DeepSeek",
     "CodeLlama",
     "Code Llama",
@@ -89,7 +90,8 @@
     "GWDG": "EU-based GPU infrastructure",
     "Vast.ai": "EU-based GPU infrastructure",
     "Claude Code": "internal automation toolchain",
-    "Anthropic": "internal automation toolchain"
+    "Anthropic": "internal automation toolchain",
+    "Devstral": "INA 7.4 Coding Model"
   },
   "superlatives": [
     "\\b(best|fastest|safest|strongest|most\\s+secure|most\\s+advanced|most\\s+powerful|most\\s+accurate|most\\s+reliable)\\b[\\s\\S]{0,60}?\\bin\\s+the\\s+world\\b",

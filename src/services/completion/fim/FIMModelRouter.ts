@@ -66,8 +66,17 @@ function capabilitiesOf(m: InaModel): ModelCapabilities {
 /** The coding models, in registry order — the routable set for completion. */
 const ROUTABLE: readonly InaModel[] = modelsByCapability('coding');
 
+/**
+ * Capabilities assumed for an id the registry does not know.
+ *
+ * supportsFIM is FALSE, and that is the fail-closed direction. Assuming FIM and
+ * being wrong does not produce an error: a model without fill-in-the-middle
+ * ignores the sentinel markers and answers in prose, which then gets inserted
+ * into the user's buffer as if it were code. Assuming no FIM and being wrong
+ * only costs a slightly less efficient prompt.
+ */
 const DEFAULT_CAPABILITIES: ModelCapabilities = {
-  supportsFIM: true,
+  supportsFIM: false,
   supportsMultiFile: false,
   supportsRepository: false,
   maxContextLength: 8192,

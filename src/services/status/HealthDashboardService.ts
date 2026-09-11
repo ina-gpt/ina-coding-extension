@@ -5,6 +5,7 @@
 import { Logger } from '../../utils/Logger';
 import { OverallHealth, HealthReport, HealthSection, HealthDetail, STATUS_CONSTANTS } from './StatusTypes';
 import { StatusAggregator } from './StatusAggregator';
+import { ConfigManager } from '../../utils/ConfigManager';
 
 export class HealthDashboardService {
   private static instance: HealthDashboardService;
@@ -36,7 +37,7 @@ export class HealthDashboardService {
     sections.push({
       name: 'AI Model', status: s.model.state === 'ready' ? OverallHealth.HEALTHY : s.model.state === 'loading' ? OverallHealth.DEGRADED : OverallHealth.UNHEALTHY, icon: '$(hubot)',
       details: [
-        { label: 'Model', value: s.model.modelName || 'unknown', status: 'neutral', tooltip: null },
+        { label: 'Model', value: s.model.modelName ? ConfigManager.getDisplayName(s.model.modelName) : 'unknown', status: 'neutral', tooltip: null },
         { label: 'State', value: s.model.state, status: s.model.state === 'ready' ? 'good' : s.model.state === 'loading' ? 'warn' : 'error', tooltip: null },
         { label: 'Active', value: `${s.model.requestsActive} requests`, status: 'neutral', tooltip: null },
       ],

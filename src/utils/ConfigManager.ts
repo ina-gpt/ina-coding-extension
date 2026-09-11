@@ -39,31 +39,39 @@ const CONFIG_SECTION = 'inaCoding';
 // Digests are SHA-256 of the exact persisted string, lower-cased before
 // hashing so a settings value that differs only in case still migrates.
 const LEGACY_MIGRATION = new Map<string, string>([
-  ['931bd4ca2f5201c97b48f4062d5658ca4826865ac9a6b761e79d53f26ba511ff', 'ina-8-coding-pro'],
-  ['e7fc5dc5f7c62d35933a9a11941c3f91b4a5e0bfabfad499ab70cb6f946df713', 'ina-8-coding'],
-  ['54420446bca9f0970ea79ce1362be320d095680215247ac98129d58e5f7e656f', 'ina-8-coding-lite'],
-  ['aa6fa1793d051621edb5811bb1dfc0faaafad350c4a59f1cffe5b5358bd2246a', 'ina-8-pro'],
-  ['48b72a4400239554846e945f46d26068080c054f710a324a283daa60683fb2b4', 'ina-8'],
-  ['60df1f77d9daff0df74ec20542cf9d1c630a9d619b7af84ae6ce496192443939', 'ina-embed'],
-  ['5ab7d838bfb421ba95a78283ac0b266ec113163230c2ccf9c84d013c6c108bd7', 'ina-embed'],
-  ['cccb702c301689328d378a6ffe96d90d23c3f292d228aa587c3905c6703d46df', 'ina-embed'],
-  ['f557f27d36a5097270c3dba259dae3c424994e916d40b2f65600992febfb7dec', 'ina-8-vision'],
-  ['848540ca64f06d9afb2529d59e9dd429db297657f695b170b94033c34836e871', 'ina-8-coding-pro'],
-  ['255ca0fdae881eb48ac9aa8f17ec0b7f5b3962e23f0524b3bb5fedffd3fa3b17', 'ina-8-pro'],
-  ['8286d092cb58243c94f0e7fbac787298cf96fdfd74ec1a82e8e98e5f0b17b451', 'ina-8-coding-lite'],
-  ['0e7b0e8855b9def44e989c5825d28910a3d90c90e86dbec10a53f8847739f502', 'ina-8-coding-pro'],
-  ['d9316f5ebed67d4014bd1b1c03076e665b7deeb53be6238120bedebf2c26f0c7', 'ina-8-coding'],
-  ['49b7701263a8f32ec45e1ab690d6a43ca211955979df99970b40cc462a2ca973', 'ina-8-coding-lite'],
-  ['4dbc741fbc7b50bd192f480d6dc3c985a8b67bd2862949b802e1892692a760a2', 'ina-8-coding-fast'],
-  ['46a7fdadcb4d5c007019a9af98c586ee443ed2cb82dfca6bdb16cb23401cea3c', 'ina-8-coding-fast'],
-  ['fa77660e39dcbad0f9af0bef3d5e9168a85f8679f0ec1d9fb777d4021d433232', 'ina-8-coding-fast'],
-  ['442789f441d800436716d2621ca1f15f036b1210d6468724d9e7eaae457f7ab6', 'ina-8-coding-fast'],
-  ['613573f7b5c9989c5860d1072fec711f3944931fdabb89d8abf292d21a3b7f20', 'ina-8-pro'],
-  ['801dcad02f38c48984c325de964ab7c9213d4c51f101cd2f6aeacff576868987', 'ina-8'],
-  ['0ef7445aefc83fdaf1914baedfb4b99289540d335c37eed656430cf3714ba456', 'ina-8-vision'],
-  ['a4134b0e39785810a45922e0b9dcf450702ce8d7d2514ef5d4c4ef3c81a08e5b', 'ina-embed'],
-  ['1aa5dd19c3d900f19e14fdc81f64128514d083934b997272a00e78061e766ac7', 'ina-embed'],
-  ['a51ea6ac970865616f6442c59374278d9c611ea1696f2603c11bfee662247789', 'ina-embed'],
+  ['a8516e42d5d1d092b3d8f41daf93b8070397794cba39a6480b46f64fd51a97b2', 'ina-7-4-coding-pro'],
+  ['f9958cdef856740ef5ed6055313b0be6397c912a0a56821b884731b57421710d', 'ina-7-4-coding'],
+  ['aa03ed3a78d1fd51ddc862526c5187cfebf4554ce147e66d0815d226d840953a', 'ina-7-4-coding-lite'],
+  ['b977fa2a87a5be5a74ae91cfd73c60767542383727cff077bec9c84fbb1b13ac', 'ina-7-4-coding-fast'],
+  ['115b7fe37388ada147c86b5a069eeea7b9cc5ddfb2afbb90bb405d2cc42840b2', 'ina-7-4-pro'],
+  ['877b1b9e66ce6da09f0a3abb5f8429da6200ecdc49a7909b1b75b41fc5145dc4', 'ina-7-4'],
+  ['0340d8b7a5dbc93093da2a4bbf423b4a5c434737b8e61f1beb1f83d237140ca5', 'ina-7-4-vision'],
+  ['911286084f63e1dabf93bef7ef2a3d9168281c5a2c36210ac7e9fe0b6ab28e20', 'ina-7-4-embed'],
+  ['931bd4ca2f5201c97b48f4062d5658ca4826865ac9a6b761e79d53f26ba511ff', 'ina-7-4-coding-pro'],
+  ['e7fc5dc5f7c62d35933a9a11941c3f91b4a5e0bfabfad499ab70cb6f946df713', 'ina-7-4-coding'],
+  ['54420446bca9f0970ea79ce1362be320d095680215247ac98129d58e5f7e656f', 'ina-7-4-coding-lite'],
+  ['aa6fa1793d051621edb5811bb1dfc0faaafad350c4a59f1cffe5b5358bd2246a', 'ina-7-4-pro'],
+  ['48b72a4400239554846e945f46d26068080c054f710a324a283daa60683fb2b4', 'ina-7-4'],
+  ['60df1f77d9daff0df74ec20542cf9d1c630a9d619b7af84ae6ce496192443939', 'ina-7-4-embed'],
+  ['5ab7d838bfb421ba95a78283ac0b266ec113163230c2ccf9c84d013c6c108bd7', 'ina-7-4-embed'],
+  ['cccb702c301689328d378a6ffe96d90d23c3f292d228aa587c3905c6703d46df', 'ina-7-4-embed'],
+  ['f557f27d36a5097270c3dba259dae3c424994e916d40b2f65600992febfb7dec', 'ina-7-4-vision'],
+  ['848540ca64f06d9afb2529d59e9dd429db297657f695b170b94033c34836e871', 'ina-7-4-coding-pro'],
+  ['255ca0fdae881eb48ac9aa8f17ec0b7f5b3962e23f0524b3bb5fedffd3fa3b17', 'ina-7-4-pro'],
+  ['8286d092cb58243c94f0e7fbac787298cf96fdfd74ec1a82e8e98e5f0b17b451', 'ina-7-4-coding-lite'],
+  ['0e7b0e8855b9def44e989c5825d28910a3d90c90e86dbec10a53f8847739f502', 'ina-7-4-coding-pro'],
+  ['d9316f5ebed67d4014bd1b1c03076e665b7deeb53be6238120bedebf2c26f0c7', 'ina-7-4-coding'],
+  ['49b7701263a8f32ec45e1ab690d6a43ca211955979df99970b40cc462a2ca973', 'ina-7-4-coding-lite'],
+  ['4dbc741fbc7b50bd192f480d6dc3c985a8b67bd2862949b802e1892692a760a2', 'ina-7-4-coding-fast'],
+  ['46a7fdadcb4d5c007019a9af98c586ee443ed2cb82dfca6bdb16cb23401cea3c', 'ina-7-4-coding-fast'],
+  ['fa77660e39dcbad0f9af0bef3d5e9168a85f8679f0ec1d9fb777d4021d433232', 'ina-7-4-coding-fast'],
+  ['442789f441d800436716d2621ca1f15f036b1210d6468724d9e7eaae457f7ab6', 'ina-7-4-coding-fast'],
+  ['613573f7b5c9989c5860d1072fec711f3944931fdabb89d8abf292d21a3b7f20', 'ina-7-4-pro'],
+  ['801dcad02f38c48984c325de964ab7c9213d4c51f101cd2f6aeacff576868987', 'ina-7-4'],
+  ['0ef7445aefc83fdaf1914baedfb4b99289540d335c37eed656430cf3714ba456', 'ina-7-4-vision'],
+  ['a4134b0e39785810a45922e0b9dcf450702ce8d7d2514ef5d4c4ef3c81a08e5b', 'ina-7-4-embed'],
+  ['1aa5dd19c3d900f19e14fdc81f64128514d083934b997272a00e78061e766ac7', 'ina-7-4-embed'],
+  ['a51ea6ac970865616f6442c59374278d9c611ea1696f2603c11bfee662247789', 'ina-7-4-embed'],
 ]);
 
 /** SHA-256 of the lower-cased value, memoised — this runs on every request. */
@@ -127,7 +135,7 @@ export interface FullConfig {
 export const CONFIG_DEFAULTS: FullConfig = {
   general: { enabled: true, language: 'auto' },
   api: { endpoint: 'https://coding-api.inagpt.com', timeout: 60000, retryAttempts: 3 },
-  models: { chat: 'ina-8-coding-pro', customChat: '', completion: 'ina-8-coding-pro', customCompletion: '', embedding: 'ina-embed' },
+  models: { chat: 'ina-7-4', customChat: '', completion: 'ina-7-4-coding-pro', customCompletion: '', embedding: 'ina-7-4-embed' },
   chat: { temperature: 0.7, maxTokens: 4096, contextLines: 100, includeImports: true, includeRecentFiles: 3, systemPrompt: '' },
   completion: { enabled: true, delay: 300, maxTokens: 256, temperature: 0.2, disabledLanguages: ['markdown', 'plaintext', 'json', 'yaml'] },
   inlineEdit: { enabled: true, showDiff: true, autoApply: false, keepHistory: true, historySize: 20 },
@@ -281,16 +289,49 @@ class ConfigManagerClass {
   getConfiguredModel(capability: ModelCapability): string {
     const m = this.getModels();
     switch (capability) {
-      case 'coding':
-        return toInaModelId(m.completion === 'custom' && m.customCompletion ? m.customCompletion : m.completion, 'coding');
+      case 'coding': {
+        const raw = m.completion === 'custom' && m.customCompletion ? m.customCompletion : m.completion;
+        return this.migrateAndPersist(raw, 'coding', m.completion === 'custom' ? 'models.customCompletion' : 'models.completion');
+      }
       case 'embedding':
-        return toInaModelId(m.embedding, 'embedding');
+        return this.migrateAndPersist(m.embedding, 'embedding', 'models.embedding');
       case 'vision':
         return toInaModelId(null, 'vision');
       case 'general':
-      default:
-        return toInaModelId(m.chat === 'custom' && m.customChat ? m.customChat : m.chat, 'general');
+      default: {
+        const raw = m.chat === 'custom' && m.customChat ? m.customChat : m.chat;
+        return this.migrateAndPersist(raw, 'general', m.chat === 'custom' ? 'models.customChat' : 'models.chat');
+      }
     }
+  }
+
+  /**
+   * Migrate a stored value and WRITE THE RESULT BACK.
+   *
+   * Migration on read alone is not enough. The ina-8-* generation is the third
+   * naming scheme these settings have carried, and a read-only shim means every
+   * session re-migrates, re-warns, and leaves the user's settings.json showing a
+   * model id that no longer exists — so the next person to read it cannot tell
+   * whether it is honoured or ignored.
+   *
+   * The write is fire-and-forget and guarded so it happens ONCE per key per
+   * session: this runs on the request path, and a settings write that awaited
+   * here would put disk I/O in front of every completion. A failed write is not
+   * an error — the value still migrates on read, which is exactly the behaviour
+   * we had before.
+   */
+  private migratedKeys = new Set<string>();
+
+  private migrateAndPersist(raw: string, capability: ModelCapability, key: string): string {
+    const migrated = toInaModelId(raw, capability);
+    if (migrated !== (raw ?? '').trim() && !this.migratedKeys.has(key)) {
+      this.migratedKeys.add(key);
+      void this.set(key, migrated, vscode.ConfigurationTarget.Global).then(
+        () => Logger.info(`[config] migrated ${key} to ${migrated}`),
+        (e) => Logger.debug(`[config] could not persist the migration of ${key}:`, e)
+      );
+    }
+    return migrated;
   }
 
   /**
